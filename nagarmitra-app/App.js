@@ -247,13 +247,17 @@ const HomeScreen = ({ navigation }) => {
       {/* Footer */}
       <View style={homeStyles.footer}>
         <Text style={homeStyles.footerTitle}>Need Help?</Text>
+        <TouchableOpacity style={homeStyles.contactRow} onPress={() => navigation.getParent()?.navigate('Others', { screen: 'FAQ' })}>
+          <Ionicons name="help-circle" size={16} color={tct('#FF4500')} />
+          <Text style={homeStyles.contactText}>How complaints, deadlines and escalation work (FAQ)</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={homeStyles.contactRow} onPress={() => navigation.getParent()?.navigate('Others', { screen: 'Feedback' })}>
+          <Ionicons name="chatbubble-ellipses" size={16} color={tct('#FF4500')} />
+          <Text style={homeStyles.contactText}>Send feedback or report a bug</Text>
+        </TouchableOpacity>
         <View style={homeStyles.contactRow}>
-          <Ionicons name="call" size={16} color={tct('#FF4500')} />
-          <Text style={homeStyles.contactText}>Helpline: 1800-123-4567</Text>
-        </View>
-        <View style={homeStyles.contactRow}>
-          <Ionicons name="mail" size={16} color={tct('#FF4500')} />
-          <Text style={homeStyles.contactText}>support@nagarmitra.gov.in</Text>
+          <Ionicons name="warning" size={16} color={tct('#DC3545')} />
+          <Text style={homeStyles.contactText}>Emergency? Call 112</Text>
         </View>
       </View>
     </ScrollView>
@@ -316,7 +320,7 @@ function MainTabs() {
       )}
       {role === 'citizen' && <Tab.Screen name="Home" component={HomeStack} />}
       <Tab.Screen name="Dashboard" component={Safe.DashboardScreen} />
-      {role === 'citizen' && <Tab.Screen name="Raise" component={Safe.RaiseScreen} />}
+      <Tab.Screen name="Raise" component={Safe.RaiseScreen} />
       <Tab.Screen name="Community" component={Safe.CommunityScreen} />
       <Tab.Screen
         name="Others"

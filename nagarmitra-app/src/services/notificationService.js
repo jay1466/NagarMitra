@@ -56,11 +56,12 @@ export async function setupNotifications() {
 /** Stop pushes to this phone (call before signing out). */
 export async function unregisterPush() {
   pushActive = false;
-  try {
-    await userAPI.setPushToken('', 'fcm');
-  } catch {
-    // offline: the server prunes dead tokens on the next send
-  }
+  // Wait at most 2s so logout is never held up by a slow or sleeping server;
+  // if this doesn't finish, the server prunes the dead token on its next send
+  await Promise.race([
+    userAPI.setPushToken('', 'fcm').catch(() => {}),
+    new Promise((resolve) => setTimeout(resolve, 2000)),
+  ]);
 }
 
 /** Show a local alert for a notification the app just fetched from the server. */

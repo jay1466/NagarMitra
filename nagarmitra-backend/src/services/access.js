@@ -26,8 +26,10 @@ export function covers(me, complaint) {
   return Object.entries(f).every(([k, v]) => complaint[k] === v);
 }
 
+const idOf = (v) => String(v?._id ?? v ?? '');
+
 export function isOwner(me, complaint) {
-  return !!me && (String(complaint.userId) === String(me._id) || complaint.firebaseUid === me.firebaseUid);
+  return !!me && (idOf(complaint.userId) === String(me._id) || complaint.firebaseUid === me.firebaseUid);
 }
 
 /** Mongo filter for the users a staff member may view/manage (strictly below them). */

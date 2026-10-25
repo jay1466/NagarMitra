@@ -35,6 +35,11 @@ const PRIVATE_FIELDS = ['firebaseUid', 'firebaseEmail', 'userId', 'internalNotes
 function present(doc, me) {
   const c = doc.toObject({ virtuals: true });
   const full = isOwner(me, doc) || covers(me, doc);
+  const reporter = doc.userId && typeof doc.userId === 'object' && doc.userId.email ? doc.userId : null;
+  c.userId = doc.userId?._id ?? doc.userId;
+  if (covers(me, doc) && reporter) {
+    c.reporter = { name: reporter.displayName || null, email: reporter.email, phone: reporter.phoneNumber || null };
+  }
   if (!full) {
     for (const f of PRIVATE_FIELDS) delete c[f];
     c.statusHistory = (c.statusHistory || []).map(({ status, changedAt, byRole }) => ({ status, changedAt, byRole }));
@@ -57,7 +62,9 @@ function present(doc, me) {
 }
 
 async function loadFor(req, res) {
-  const doc = await Complaint.findById(req.params.id).populate('assignedTo', 'displayName email designation department');
+  const doc = await Complaint.findById(req.params.id)
+    .populate('assignedTo', 'displayName email designation department phoneNumber')
+    .populate('userId', 'displayName email phoneNumber');
   if (!doc) {
     res.status(404).json({ error: 'Complaint not found' });
     return null;
@@ -118,7 +125,7 @@ router.post('/', requireUser(), async (req, res) => {
 // scope=work: the caller's jurisdiction (officer: dept+district, district/state/super admin: their area)
 router.get('/', optionalUser(), async (req, res) => {
   try {
-    const { category, state, district, status, mine, scope, overdue, escalated, department, assignedTo, unassigned } = req.query;
+    const { category, state, district, status, mine, scope, overdue, escalated, department, assignedTo, unassigned, search } = req.query;
     const { page, limit, skip } = parsePaging(req.query);
     const me = req.me;
     let q = {};
@@ -150,6 +157,20 @@ router.get('/', optionalUser(), async (req, res) => {
     }
     if (isAdmin(me) && assignedTo) q.assignedTo = String(assignedTo);
 
+    // Free-text search: report ID, title, description, address, category — and for
+    // staff in their work queue also the reporter's or officer's name/email/phone
+    const term = String(search || '').trim().slice(0, 60);
+    if (term) {
+      const rx = new RegExp(term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+      const or = [{ reportId: rx }, { title: rx }, { description: rx }, { address: rx }, { category: rx }];
+      if (scope === 'work' && isStaff(me)) {
+        const people = await User.find({ $or: [{ displayName: rx }, { email: rx }, { phoneNumber: rx }] }).select('_id').limit(200);
+        const ids = people.map((p) => p._id);
+        if (ids.length) or.push({ userId: { $in: ids } }, { assignedTo: { $in: ids } });
+      }
+      q.$and = [...(q.$and || []), { $or: or }];
+    }
+
     const sort = scope === 'work' ? { escalationLevel: -1, dueAt: 1 } : { createdAt: -1 };
     const [docs, total] = await Promise.all([
       Complaint.find(q)
@@ -170,7 +191,8 @@ router.get('/', optionalUser(), async (req, res) => {
 router.get('/report/:reportId', optionalUser(), async (req, res) => {
   try {
     const doc = await Complaint.findOne({ reportId: String(req.params.reportId).trim().toUpperCase() })
-      .populate('assignedTo', 'displayName email designation department');
+      .populate('assignedTo', 'displayName email designation department phoneNumber')
+      .populate('userId', 'displayName email phoneNumber');
     if (!doc) return res.status(404).json({ error: 'No report found with this ID' });
     return res.json({ complaint: present(doc, req.me) });
   } catch (err) {

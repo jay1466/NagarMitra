@@ -51,7 +51,8 @@ async function sendFcm(users, { title, body, complaint }) {
  * @param {Array<ObjectId|string>} recipientIds Mongo user ids (falsy entries are ignored)
  */
 export async function notifyUsers(recipientIds, { type, title, body, complaint }) {
-  const ids = [...new Set(recipientIds.filter(Boolean).map(String))];
+  // accept ids or populated documents
+  const ids = [...new Set(recipientIds.filter(Boolean).map((r) => String(r?._id ?? r)))];
   if (!ids.length) return;
   try {
     await Notification.insertMany(
@@ -67,6 +68,8 @@ export async function notifyUsers(recipientIds, { type, title, body, complaint }
     );
     const users = await User.find({
       _id: { $in: ids },
+      'preferences.pushNotifications': { $ne: false }, // the inbox always gets it; push only if enabled
+      ...(String(type).startsWith('complaint_') ? { 'preferences.issueUpdates': { $ne: false } } : {}),
       $or: [{ fcmToken: { $exists: true, $ne: '' } }, { expoPushToken: { $exists: true, $ne: '' } }],
     }).select('fcmToken expoPushToken');
     await sendFcm(users, { title, body, complaint });

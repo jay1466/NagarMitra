@@ -35,10 +35,10 @@ async function authHeaders(base = {}) {
   return base;
 }
 
-async function request(method, path, body) {
+async function request(method, path, body, timeoutMs = TIMEOUT_MS) {
   const headers = await authHeaders(body !== undefined ? { 'Content-Type': 'application/json' } : {});
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
 
   let res;
   try {
@@ -130,14 +130,11 @@ export const analyticsAPI = {
 
 // Complaint API functions
 export const complaintAPI = {
-  create: (data) => apiPost('/api/v1/complaints', data),
+  // Photos make this request large: allow extra time on slow mobile networks
+  create: (data) => request('POST', '/api/v1/complaints', data, 120000),
   getById: (id) => apiGet(`/api/v1/complaints/${id}`),
   getByReportId: (reportId) => apiGet(`/api/v1/complaints/report/${encodeURIComponent(reportId.trim())}`),
   getList: (params) => apiGet(`/api/v1/complaints${qs(params)}`),
-  vote: (id, type) => apiPost(`/api/v1/complaints/${id}/vote`, { type }),
-  addNote: (id, note) => apiPost(`/api/v1/complaints/${id}/notes`, { note }),
-  updateStatus: (id, status, reason, notes) =>
-    apiPut(`/api/v1/complaints/${id}/status`, { status, reason, notes }),
 };
 
 export const metaAPI = {

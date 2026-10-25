@@ -472,7 +472,7 @@ export default function CommunityScreen({ navigation }) {
                   key={category.id}
                   style={[
                     styles.categoryChip,
-                    { backgroundColor: newPost.category === category.id ? category.color : '#F8F9FA' }
+                    { backgroundColor: newPost.category === category.id ? category.color : tc('#F8F9FA') }
                   ]}
                   onPress={() => setNewPost(prev => ({ ...prev, category: category.id }))}
                 >

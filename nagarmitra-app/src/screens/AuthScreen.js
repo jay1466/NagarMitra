@@ -24,6 +24,7 @@ import {
   updateProfile,
 } from '../lib/firebase';
 import { userAPI } from '../api/client';
+import LocationPicker from '../components/LocationPicker';
 
 import { tc, tct, themedStyles } from '../theme';
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
@@ -76,14 +77,13 @@ export default function AuthScreen() {
   const [mode, setMode] = useState('login'); // 'login' | 'signup'
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
-  const [city, setCity] = useState('');
+  const [place, setPlace] = useState({ state: null, district: null });
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
   const emailRef = useRef(null);
-  const cityRef = useRef(null);
   const passwordRef = useRef(null);
 
   useEffect(() => {
@@ -101,7 +101,7 @@ export default function AuthScreen() {
     const e = {};
     if (mode === 'signup' && name.trim().length < 2) e.name = 'Please enter your full name.';
     if (!EMAIL_RE.test(email.trim())) e.email = 'Please enter a valid email address.';
-    if (mode === 'signup' && !city.trim()) e.city = 'Please enter your city or ward.';
+    if (mode === 'signup' && (!place.state || !place.district)) e.place = 'Please choose your state and district.';
     if (!password) e.password = 'Please enter your password.';
     else if (mode === 'signup' && password.length < 6) e.password = 'Use at least 6 characters.';
     setErrors(e);
@@ -120,7 +120,7 @@ export default function AuthScreen() {
         // Profile details are best-effort: the account already exists at this point
         await updateProfile(cred.user, { displayName: name.trim() }).catch(() => {});
         userAPI
-          .updateProfile({ displayName: name.trim(), profile: { city: city.trim() } })
+          .updateProfile({ displayName: name.trim(), state: place.state, district: place.district })
           .catch(() => {});
         sendEmailVerification(cred.user).catch(() => {});
       } else {
@@ -222,23 +222,19 @@ export default function AuthScreen() {
             autoComplete="email"
             textContentType="emailAddress"
             returnKeyType="next"
-            onSubmitEditing={() => (isSignup ? cityRef : passwordRef).current?.focus()}
+            onSubmitEditing={() => passwordRef.current?.focus()}
             error={errors.email}
           />
 
           {isSignup && (
-            <Field
-              inputRef={cityRef}
-              label="City / Ward"
-              icon="location-outline"
-              value={city}
-              onChangeText={setCity}
-              placeholder="e.g. Ahmedabad, Ward 12"
-              autoCapitalize="words"
-              returnKeyType="next"
-              onSubmitEditing={() => passwordRef.current?.focus()}
-              error={errors.city}
-            />
+            <View style={styles.inputGroup}>
+              <LocationPicker
+                label="Your state & district"
+                value={place}
+                onChange={(p) => setPlace({ state: p.state, district: p.district })}
+              />
+              {!!errors.place && <Text style={styles.errorText}>{errors.place}</Text>}
+            </View>
           )}
 
           <Field

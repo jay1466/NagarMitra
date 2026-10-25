@@ -6,13 +6,13 @@
 |---|---|
 | **Project type** | Mobile Application Development (MAD) project |
 | **Platform** | Android (React Native / Expo), Node.js REST backend |
-| **Current version** | v1.2.1 (released 25 October 2026) |
+| **Current version** | v1.3.0 (released 26 October 2026) |
 | **Student** | _Your name, enrolment no., class/division_ |
 | **Guide** | _Faculty name_ |
 | **Institute** | _Institute name_ |
 | **Source code** | https://github.com/jay1466/NagarMitra |
 | **Live backend** | https://nagarmitra-backend.onrender.com |
-| **Android APK (v1.2.1)** | https://expo.dev/artifacts/eas/fjoNrBQ8fvzmqJlxg4nts53gYnbfv3VStQhpfezwSg8.apk |
+| **Android APK (v1.3.0)** | https://expo.dev/artifacts/eas/MiQOpgH6TR51EKV_xKa_Zk0tOBoYvukBCvcc_6hPixI.apk |
 
 ---
 
@@ -211,7 +211,8 @@ Citizen reports ──► Report ID generated ──► Department + district id
 ### 9.4 System
 - Automatic routing, SLA deadlines, reminders, multi-level escalation, auto-close after 7 days
 - Push notifications via Firebase Cloud Messaging, plus in-app inbox and polling fallback
-- Per-screen crash guards ("Something went wrong — Try again") instead of app crashes
+- Per-screen crash guards ("Something went wrong — Try again") instead of app crashes, plus crash reporting to the server
+- **Dark mode** following the phone, or chosen in Settings (System / Light / Dark)
 - Friendly network error messages, timeouts that tolerate server wake-up, retry buttons
 
 ---
@@ -688,8 +689,10 @@ The codebase started from an open-source hackathon prototype (see §30). A full 
 | **1.1.0** | 25 Oct 2026 | Dashboard crash fixed, user creation fixed, login UI rewritten, real profile/feedback/notifications, photos stored, fake data removed, central error handling, crash guards |
 | **1.2.0** | 25 Oct 2026 | India-wide hierarchy (Super/State/District admin, officers, citizens), auto-routing, SLA and escalation, complaint detail, work queue, admin panel, people management, State → District dropdowns, demo seeder |
 | **1.2.1** | 25 Oct 2026 | Push notifications via Firebase Cloud Messaging, external SLA scheduler with secret key, duplicate-alert prevention |
+| **1.2.2** | 26 Oct 2026 | Fixed invisible text on phones that force dark mode; WebView crash recovery on Dashboard; crash reporting; 12 unused packages removed |
+| **1.3.0** | 26 Oct 2026 | Full dark mode (System/Light/Dark setting) with readable contrast; map loads on demand |
 
-Git tags: `v1.1.0`, `v1.2.0`, `v1.2.1`. Full details are in `CHANGELOG.md`.
+Git tags: `v1.1.0`, `v1.2.0`, `v1.2.1`, `v1.2.2`, `v1.3.0`. Full details are in `CHANGELOG.md`.
 
 ---
 
@@ -775,7 +778,7 @@ npx eas-cli build -p android --profile preview
 | Departments / categories | 5 / 6 |
 | Complaint statuses | 7 |
 | Automated E2E checks | 35 (all passing) |
-| Releases | 3 tagged (v1.1.0, v1.2.0, v1.2.1) |
+| Releases | 5 tagged (v1.1.0 → v1.3.0) |
 
 ---
 

@@ -25,8 +25,8 @@ const slides = [
   },
   {
     key: '4',
-    title: 'Ward-wise Transparency\nवार्ड-स्तर पारदर्शिता',
-    subtitle: 'See issues reported in your locality and how they are being resolved.\nअपने वार्ड की समस्याएँ और उनका समाधान देखें।',
+    title: 'District-wise Transparency\nज़िला-स्तर पारदर्शिता',
+    subtitle: 'See issues reported in your district and how they are being resolved.\nअपने ज़िले की समस्याएँ और उनका समाधान देखें।',
     icon: (size,color) => <Ionicons name="map" size={size} color={color} />,
   },
   {
@@ -130,7 +130,9 @@ export default function OnboardingScreen({ onDone }) {
 
   const next = () => {
     if (index < slides.length - 1) {
-      listRef.current?.scrollToIndex({ index: index + 1, animated: true });
+      // Android doesn't always fire onMomentumScrollEnd for programmatic scrolls
+      listRef.current?.scrollToOffset({ offset: (index + 1) * width, animated: true });
+      setIndex(index + 1);
     } else {
       onDone?.();
     }

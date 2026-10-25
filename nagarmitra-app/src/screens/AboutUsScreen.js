@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   ScrollView,
   Linking,
+  Alert,
 } from 'react-native';
 import { APP_VERSION, RELEASE_DATE, COPYRIGHT_YEAR } from '../appInfo';
 import { Ionicons } from '@expo/vector-icons';
@@ -174,41 +175,31 @@ const AboutUsScreen = ({ navigation }) => {
       {/* Contact Information */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Contact Us</Text>
-        <TouchableOpacity
-          style={styles.contactItem}
-          onPress={() => handleEmailPress('support@nagarmitra.gov.in')}
-        >
-          <Ionicons name="mail-outline" size={20} color={tct('#FF4500')} />
-          <Text style={styles.contactText}>support@nagarmitra.gov.in</Text>
+        <TouchableOpacity style={styles.contactItem} onPress={() => navigation.navigate('Feedback')}>
+          <Ionicons name="chatbubble-ellipses-outline" size={20} color={tct('#FF4500')} />
+          <Text style={styles.contactText}>Send feedback or report a bug</Text>
         </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.contactItem}
-          onPress={() => Linking.openURL('tel:1800-123-4567')}
-        >
-          <Ionicons name="call-outline" size={20} color={tct('#FF4500')} />
-          <Text style={styles.contactText}>1800-123-4567 (Helpline)</Text>
+        <TouchableOpacity style={styles.contactItem} onPress={() => handleLinkPress('https://github.com/jay1466/NagarMitra')}>
+          <Ionicons name="logo-github" size={20} color={tct('#FF4500')} />
+          <Text style={styles.contactText}>Source code on GitHub</Text>
         </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.contactItem}
-          onPress={() => handleLinkPress('https://nagarmitra.gov.in')}
-        >
-          <Ionicons name="globe-outline" size={20} color={tct('#FF4500')} />
-          <Text style={styles.contactText}>www.nagarmitra.gov.in</Text>
-        </TouchableOpacity>
+        <Text style={styles.disclaimer}>
+          NagarMitra is a student project and is not an official government service. For emergencies call 112.
+        </Text>
       </View>
 
       {/* Legal */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Legal</Text>
-        <TouchableOpacity style={styles.legalItem}>
+        <TouchableOpacity style={styles.legalItem} onPress={() => Alert.alert('Privacy', PRIVACY_TEXT)}>
           <Text style={styles.legalText}>Privacy Policy</Text>
           <Ionicons name="chevron-forward" size={16} color={tct('#CCC')} />
         </TouchableOpacity>
-        <TouchableOpacity style={styles.legalItem}>
+        <TouchableOpacity style={styles.legalItem} onPress={() => Alert.alert('Terms of use', TERMS_TEXT)}>
           <Text style={styles.legalText}>Terms of Service</Text>
           <Ionicons name="chevron-forward" size={16} color={tct('#CCC')} />
         </TouchableOpacity>
-        <TouchableOpacity style={styles.legalItem}>
+        <TouchableOpacity style={styles.legalItem} onPress={() => Alert.alert('Open source', LICENSES_TEXT)}>
           <Text style={styles.legalText}>Open Source Licenses</Text>
           <Ionicons name="chevron-forward" size={16} color={tct('#CCC')} />
         </TouchableOpacity>
@@ -227,7 +218,26 @@ const AboutUsScreen = ({ navigation }) => {
   );
 };
 
+const PRIVACY_TEXT =
+  'We store your name, email, optional phone and photo, your home state/district, and the complaints and posts you create. ' +
+  'Officers and admins of the responsible department and district see your complaints so they can act on them. ' +
+  'Other citizens see complaints without your name or contact details. Anonymous posts never show your name. ' +
+  'Passwords are handled by Firebase Authentication and are never stored by NagarMitra.';
+const TERMS_TEXT =
+  'Report real civic issues only, without abusive or misleading content. Do not upload photos of people without consent. ' +
+  'Complaints may be rejected if they are outside municipal responsibility. NagarMitra is a student project, not an official government service.';
+const LICENSES_TEXT =
+  'Built with React Native, Expo, React Navigation, Firebase, Leaflet and OpenStreetMap data (© OpenStreetMap contributors), ' +
+  'Node.js, Express, MongoDB/Mongoose and TensorFlow.js. State and district list: Indian-state-district-json (MIT). ' +
+  'Based on the NagarMitra prototype by Team ParaX.';
+
 const styles = themedStyles(() => StyleSheet.create({
+  disclaimer: {
+    fontSize: 12,
+    color: tct('#888'),
+    marginTop: 10,
+    lineHeight: 17,
+  },
   container: {
     flex: 1,
     backgroundColor: tc('#FFF'),

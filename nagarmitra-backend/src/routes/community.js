@@ -105,21 +105,12 @@ router.get('/stories', async (_req, res) => {
 });
 
 // Get trending posts
-router.get('/posts/trending', async (req, res) => {
+router.get('/posts/trending', optionalFirebaseAuth(), async (req, res) => {
   try {
-    const { limit = 10 } = req.query;
-    const posts = await CommunityPost.findTrendingPosts(parseInt(limit));
-    
-    return res.json({
-      posts: posts.map(post => ({
-        ...post.toObject(),
-        isLiked: req.user ? post.likedBy.includes(req.user._id) : false,
-        userVote: req.user ? (
-          post.upvotedBy.includes(req.user._id) ? 'up' :
-          post.downvotedBy.includes(req.user._id) ? 'down' : null
-        ) : null
-      }))
-    });
+    const { limit } = parsePaging(req.query, { defaultLimit: 10, maxLimit: 50 });
+    const [posts, viewer] = await Promise.all([CommunityPost.findTrendingPosts(limit), viewerFrom(req)]);
+    // toClientPost hides the author of anonymous posts
+    return res.json({ posts: posts.map((p) => toClientPost(p, viewer)) });
   } catch (err) {
     return sendError(res, err);
   }
@@ -199,7 +190,7 @@ router.post('/posts', requireFirebaseAuth({ requireVerified: false }), async (re
 });
 
 // Get a specific post
-router.get('/posts/:postId', async (req, res) => {
+router.get('/posts/:postId', optionalFirebaseAuth(), async (req, res) => {
   try {
     const post = await CommunityPost.findById(req.params.postId)
       .populate('author', 'displayName photoURL profile.firstName profile.lastName');
@@ -215,16 +206,7 @@ router.get('/posts/:postId', async (req, res) => {
     // Increment view count
     await post.incrementView();
 
-    return res.json({
-      post: {
-        ...post.toObject(),
-        isLiked: req.user ? post.likedBy.includes(req.user._id) : false,
-        userVote: req.user ? (
-          post.upvotedBy.includes(req.user._id) ? 'up' :
-          post.downvotedBy.includes(req.user._id) ? 'down' : null
-        ) : null
-      }
-    });
+    return res.json({ post: toClientPost(post, await viewerFrom(req)) });
   } catch (err) {
     return sendError(res, err);
   }
@@ -250,7 +232,10 @@ router.post('/posts/:postId/like', requireFirebaseAuth({ requireVerified: false 
     await post.toggleLike(user._id);
 
     // Create notification if it was a new like (not unlike) and not self-like
-    if (!wasLiked && post.author?._id && !post.author._id.equals(user._id)) {
+    const authorWantsIt = post.author?._id
+      ? (await User.findById(post.author._id).select('preferences.communityUpdates'))?.preferences?.communityUpdates !== false
+      : false;
+    if (!wasLiked && authorWantsIt && !post.author._id.equals(user._id)) {
       await Notification.createCommunityNotification(
         post,
         'community_like',
@@ -402,34 +387,27 @@ router.delete('/posts/:postId', requireFirebaseAuth({ requireVerified: false }),
 });
 
 // Get posts by a specific user
-router.get('/users/:userId/posts', async (req, res) => {
+router.get('/users/:userId/posts', optionalFirebaseAuth(), async (req, res) => {
   try {
-    const { page = 1, limit = 20 } = req.query;
+    const { page, limit, skip } = parsePaging(req.query);
     const userId = req.params.userId;
+    const viewer = await viewerFrom(req);
+    // Anonymous posts are only listed for their own author, otherwise this would unmask them
+    const q = { author: userId, isPublic: true, isActive: true };
+    if (String(viewer?._id) !== String(userId)) q.isAnonymous = { $ne: true };
 
-    const posts = await CommunityPost.find({
-      author: userId,
-      isPublic: true,
-      isActive: true
-    })
-      .populate('author', 'displayName photoURL profile.firstName profile.lastName')
-      .sort({ createdAt: -1 })
-      .skip((page - 1) * limit)
-      .limit(parseInt(limit));
-
-    const total = await CommunityPost.countDocuments({
-      author: userId,
-      isPublic: true,
-      isActive: true
-    });
+    const [posts, total] = await Promise.all([
+      CommunityPost.find(q)
+        .populate('author', 'displayName photoURL profile.firstName profile.lastName')
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit),
+      CommunityPost.countDocuments(q),
+    ]);
 
     return res.json({
-      posts,
-      pagination: {
-        current: parseInt(page),
-        total: Math.ceil(total / parseInt(limit)),
-        count: posts.length
-      }
+      posts: posts.map((p) => toClientPost(p, viewer)),
+      pagination: { current: page, total: Math.ceil(total / limit), count: posts.length },
     });
   } catch (err) {
     return sendError(res, err);

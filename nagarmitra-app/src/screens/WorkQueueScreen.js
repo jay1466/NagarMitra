@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator, RefreshControl, ScrollView } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator, RefreshControl, ScrollView, TextInput } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { complaintAPI, errorMessage } from '../api/client';
@@ -32,6 +32,14 @@ export default function WorkQueueScreen({ navigation, route }) {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
+  const [search, setSearch] = useState('');
+  const [term, setTerm] = useState('');
+
+  // Search after the user pauses typing
+  useEffect(() => {
+    const t = setTimeout(() => setTerm(search.trim()), 400);
+    return () => clearTimeout(t);
+  }, [search]);
 
   const extra = preset.extra || {};
   const base = { scope: 'work', limit: 50, ...extra };
@@ -40,7 +48,7 @@ export default function WorkQueueScreen({ navigation, route }) {
     setError('');
     try {
       const f = FILTERS.find((x) => x.key === filter) || FILTERS[0];
-      const res = await complaintAPI.getList({ ...base, ...f.params });
+      const res = await complaintAPI.getList({ ...base, ...f.params, search: term || undefined });
       setItems(res.items || []);
       setTotal(res.total || 0);
     } catch (e) {
@@ -49,7 +57,7 @@ export default function WorkQueueScreen({ navigation, route }) {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [filter, JSON.stringify(extra)]);
+  }, [filter, term, JSON.stringify(extra)]);
 
   const loadCounts = useCallback(async () => {
     const n = (params) => complaintAPI.getList({ ...base, ...params, limit: 1 }).then((r) => r.total || 0).catch(() => null);
@@ -95,6 +103,25 @@ export default function WorkQueueScreen({ navigation, route }) {
         </View>
       )}
 
+      <View style={styles.searchRow}>
+        <Ionicons name="search" size={18} color={tct('#999')} />
+        <TextInput
+          style={styles.searchInput}
+          value={search}
+          onChangeText={setSearch}
+          placeholder="Search ID, issue, address, reporter or officer name"
+          placeholderTextColor={tc('#999')}
+          autoCorrect={false}
+          returnKeyType="search"
+          onSubmitEditing={() => setTerm(search.trim())}
+        />
+        {!!search && (
+          <TouchableOpacity onPress={() => { setSearch(''); setTerm(''); }}>
+            <Ionicons name="close-circle" size={18} color={tct('#999')} />
+          </TouchableOpacity>
+        )}
+      </View>
+
       <View>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
           {FILTERS.map((f) => (
@@ -125,7 +152,7 @@ export default function WorkQueueScreen({ navigation, route }) {
                 <Text style={styles.errorText}>{error} Tap to retry.</Text>
               </TouchableOpacity>
             ) : (
-              <Text style={styles.count}>{total} complaint{total === 1 ? '' : 's'}</Text>
+              <Text style={styles.count}>{total} complaint{total === 1 ? '' : 's'}{term ? ` matching “${term}”` : ''}</Text>
             )
           }
           renderItem={({ item }) => (
@@ -167,6 +194,8 @@ const styles = themedStyles(() => StyleSheet.create({
   sumCard: { flex: 1, backgroundColor: tc('#FFF'), borderRadius: 12, paddingVertical: 14, alignItems: 'center' },
   sumValue: { fontSize: 24, fontWeight: 'bold' },
   sumLabel: { fontSize: 12, color: tct('#777'), marginTop: 2 },
+  searchRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginHorizontal: 16, marginTop: 12, paddingHorizontal: 12, borderRadius: 10, backgroundColor: tc('#FFF'), borderWidth: 1, borderColor: tc('#E5E5E5') },
+  searchInput: { flex: 1, fontSize: 14, color: tct('#1A1A1A'), paddingVertical: 10 },
   chips: { paddingHorizontal: 16, paddingVertical: 10, gap: 8 },
   chip: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 18, backgroundColor: tc('#FFF'), borderWidth: 1, borderColor: tc('#E0E0E0') },
   chipActive: { backgroundColor: tc('#FF4500'), borderColor: tc('#FF4500') },

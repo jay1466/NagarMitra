@@ -1,5 +1,25 @@
 # Changelog
 
+## v1.4.0 — 2026-10-26
+
+### Added
+- **Search** in the Work Queue / admin lists (report ID, issue text, address, category, reporter name/email/phone, officer name) and on the Dashboard (public search without personal data).
+- **Complaint detail for staff**: status progress tracker, "Update status" card with the allowed next steps, "Reported by" card (name, tap-to-call, email) for the responsible staff, larger photo gallery, "Open in Maps" directions, and a view-only note outside one's jurisdiction.
+- **Raise** is available to every role (staff can file on behalf of callers).
+- Sign-up asks for **State → District** (dropdowns/GPS) and saves it; Raise pre-fills it and remembers the district of a citizen's first complaint.
+- Settings rebuilt with only working options: Theme, Push notifications, Complaint updates, Community activity (all respected by the server), App permissions, FAQ, Feedback.
+- Accurate FAQ describing the real workflow, deadlines and escalation; working Privacy / Terms / Licenses screens.
+
+### Fixed
+- **Privacy:** `/analytics/*` (incl. an export of every reporter's email) was open to any logged-in user — now super admin only. Trending, single-post and posts-by-user endpoints revealed authors of **anonymous** posts — fixed.
+- Report IDs are dated in Indian time (were UTC).
+- Logout could hang up to 45 s waiting for the server.
+- Onboarding "Next" could get stuck on some Android phones.
+- Removed made-up `.gov.in` email, helpline and website from Home, About and FAQ; added "student project, not an official service" note and the 112 emergency number.
+- Community category chips unreadable in dark mode.
+- Complaint upload timeout raised to 120 s; failed submissions are reported for diagnosis.
+- Removed dead API calls and the unused chart component/libraries.
+
 ## v1.3.0 — 2026-10-26
 
 ### Added

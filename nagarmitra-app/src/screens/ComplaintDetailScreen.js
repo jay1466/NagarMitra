@@ -13,6 +13,7 @@ import {
   RefreshControl,
   KeyboardAvoidingView,
   Platform,
+  Linking,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
@@ -25,6 +26,9 @@ import { toCompressedDataUri } from '../utils/image';
 
 import { tc, tct, themedStyles } from '../theme';
 // Next steps an officer/admin can take from each status
+// Main path of a complaint, used for the progress tracker
+const PROGRESS = ['submitted', 'assigned', 'acknowledged', 'in_progress', 'resolved', 'closed'];
+
 const STAFF_ACTIONS = {
   submitted: ['acknowledged', 'rejected'],
   assigned: ['acknowledged', 'rejected'],
@@ -40,7 +44,7 @@ const ACTION_LABEL = {
 
 export default function ComplaintDetailScreen({ route, navigation }) {
   const { id } = route.params || {};
-  const { meta, refreshUnread } = useSession();
+  const { meta, refreshUnread, isStaff } = useSession();
   const [c, setC] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -228,6 +232,54 @@ export default function ComplaintDetailScreen({ route, navigation }) {
           </View>
         </View>
 
+        {/* Progress */}
+        <View style={styles.card}>
+          <Text style={styles.section}>Status</Text>
+          {c.status === 'rejected' ? (
+            <View style={[styles.row, { gap: 8 }]}>
+              <Ionicons name="close-circle" size={22} color={tct('#8B0000')} />
+              <Text style={[styles.body, { flex: 1 }]}>Rejected — see the reason below.</Text>
+            </View>
+          ) : (
+            <View style={styles.progress}>
+              {PROGRESS.map((st, i) => {
+                const reached = i <= Math.max(PROGRESS.indexOf(c.status), 0);
+                const current = st === c.status;
+                return (
+                  <View key={st} style={styles.stepWrap}>
+                    {i > 0 && <View style={[styles.stepLine, reached && { backgroundColor: statusInfo(st).color }]} />}
+                    <View style={[styles.stepDot, reached && { backgroundColor: statusInfo(st).color, borderColor: statusInfo(st).color }, current && styles.stepDotCurrent]}>
+                      {reached && <Ionicons name={current ? statusInfo(st).icon : 'checkmark'} size={current ? 14 : 12} color="#FFF" />}
+                    </View>
+                    <Text style={[styles.stepLabel, current && styles.stepLabelCurrent]} numberOfLines={2}>{statusInfo(st).label}</Text>
+                  </View>
+                );
+              })}
+            </View>
+          )}
+          {c.reopenCount > 0 && <Text style={styles.hint}>Reopened {c.reopenCount} time{c.reopenCount > 1 ? 's' : ''} by the citizen.</Text>}
+        </View>
+
+        {/* Reporter (only for staff responsible for this complaint) */}
+        {!!c.reporter && (
+          <View style={styles.card}>
+            <Text style={styles.section}>Reported by</Text>
+            <View style={styles.row}>
+              <Ionicons name="person-circle" size={40} color={tct('#FF4500')} />
+              <View style={{ flex: 1, marginLeft: 10 }}>
+                <Text style={styles.title}>{c.reporter.name || 'Citizen'}</Text>
+                <Text style={styles.reportId} selectable>{c.reporter.email}</Text>
+              </View>
+            </View>
+            <View style={[styles.actions, { marginTop: 10 }]}>
+              {!!c.reporter.phone && (
+                <ActionButton label={`Call ${c.reporter.phone}`} icon="call" color={tct('#28A745')} onPress={() => Linking.openURL(`tel:${c.reporter.phone}`).catch(() => {})} />
+              )}
+              <ActionButton label="Email" icon="mail" color={tct('#1A56DB')} onPress={() => Linking.openURL(`mailto:${c.reporter.email}?subject=${encodeURIComponent(`Your complaint ${c.reportId}`)}`).catch(() => {})} />
+            </View>
+          </View>
+        )}
+
         {/* Details */}
         <View style={styles.card}>
           <Text style={styles.section}>Description</Text>
@@ -239,7 +291,10 @@ export default function ComplaintDetailScreen({ route, navigation }) {
             </View>
           )}
           {Array.isArray(c.media) && c.media.length > 0 && (
-            <ScrollView horizontal style={{ marginTop: 12 }} showsHorizontalScrollIndicator={false}>
+            <Text style={[styles.section, { marginTop: 14, marginBottom: 0 }]}>Photos ({c.media.length}) · tap to enlarge</Text>
+          )}
+          {Array.isArray(c.media) && c.media.length > 0 && (
+            <ScrollView horizontal style={{ marginTop: 8 }} showsHorizontalScrollIndicator={false}>
               {c.media.map((m, i) => (
                 <TouchableOpacity key={i} onPress={() => setViewer(m)}>
                   <Image source={{ uri: m }} style={styles.photo} />
@@ -253,6 +308,15 @@ export default function ComplaintDetailScreen({ route, navigation }) {
                 height={180}
                 points={[{ ...coords, weight: 1, color: statusInfo(c.status).color, title: c.category, subtitle: c.reportId }]}
               />
+              <TouchableOpacity
+                style={[styles.row, { marginTop: 8, gap: 6 }]}
+                onPress={() => Linking.openURL(Platform.OS === 'android'
+                  ? `geo:${coords.lat},${coords.lng}?q=${coords.lat},${coords.lng}(${encodeURIComponent(c.reportId)})`
+                  : `https://maps.apple.com/?q=${coords.lat},${coords.lng}`).catch(() => {})}
+              >
+                <Ionicons name="navigate" size={16} color={tct('#1A56DB')} />
+                <Text style={[styles.link, { marginTop: 0, color: tct('#1A56DB') }]}>Open in Maps (directions)</Text>
+              </TouchableOpacity>
             </View>
           )}
         </View>
@@ -280,7 +344,12 @@ export default function ComplaintDetailScreen({ route, navigation }) {
         {/* Actions */}
         {(staffActions.length > 0 || (c.canAssign && isOpen) || c.isMine) && (
           <View style={styles.card}>
-            <Text style={styles.section}>Actions</Text>
+            <Text style={styles.section}>{staffActions.length || (c.canAssign && isOpen) ? 'Update status' : 'Your actions'}</Text>
+            {staffActions.length > 0 && (
+              <Text style={[styles.hint, { marginTop: -4, marginBottom: 10 }]}>
+                Current: {statusInfo(c.status).label}. Choose the next step — the citizen is notified automatically.
+              </Text>
+            )}
             <View style={styles.actions}>
               {staffActions.map((s) => (
                 <ActionButton key={s} {...ACTION_LABEL[s]} disabled={busy} onPress={() => onStaffAction(s)} />
@@ -309,6 +378,13 @@ export default function ComplaintDetailScreen({ route, navigation }) {
             {c.isMine && isOpen && !c.canNudge && (
               <Text style={styles.hint}>You can send one reminder every {meta.nudgeIntervalHours || 24} hours.</Text>
             )}
+          </View>
+        )}
+
+        {isStaff && !c.canManage && !c.isMine && (
+          <View style={[styles.card, { flexDirection: 'row', alignItems: 'center', gap: 8 }]}>
+            <Ionicons name="eye-outline" size={18} color={tct('#888')} />
+            <Text style={[styles.hint, { marginTop: 0, flex: 1 }]}>View only — this complaint is outside your department or jurisdiction.</Text>
           </View>
         )}
 
@@ -501,7 +577,14 @@ const styles = themedStyles(() => StyleSheet.create({
   assigneeText: { flex: 1, fontSize: 14, color: tct('#444') },
   section: { fontSize: 15, fontWeight: 'bold', color: tct('#222'), marginBottom: 8 },
   body: { fontSize: 14, color: tct('#444'), lineHeight: 21 },
-  photo: { width: 110, height: 110, borderRadius: 8, marginRight: 8, backgroundColor: tc('#EEE') },
+  photo: { width: 140, height: 140, borderRadius: 10, marginRight: 8, backgroundColor: tc('#EEE') },
+  progress: { flexDirection: 'row', alignItems: 'flex-start' },
+  stepWrap: { flex: 1, alignItems: 'center' },
+  stepLine: { position: 'absolute', top: 11, right: '50%', width: '100%', height: 3, backgroundColor: tc('#E5E5E5') },
+  stepDot: { width: 24, height: 24, borderRadius: 12, borderWidth: 2, borderColor: tc('#DDD'), backgroundColor: tc('#FFF'), alignItems: 'center', justifyContent: 'center' },
+  stepDotCurrent: { width: 28, height: 28, borderRadius: 14, marginTop: -2 },
+  stepLabel: { fontSize: 10, color: tct('#888'), marginTop: 6, textAlign: 'center' },
+  stepLabelCurrent: { color: tct('#222'), fontWeight: 'bold' },
   rating: { marginTop: 10, color: tct('#B8860B'), fontSize: 15 },
   actions: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   actionBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1.5, borderRadius: 20, paddingHorizontal: 14, paddingVertical: 8 },

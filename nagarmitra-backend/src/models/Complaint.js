@@ -165,10 +165,11 @@ function pad(num, size) {
 }
 
 ComplaintSchema.statics.generateReportId = async function (regionCode = 'IN') {
-  const today = new Date();
-  const y = today.getFullYear();
-  const m = pad(today.getMonth() + 1, 2);
-  const d = pad(today.getDate(), 2);
+  // Date the ID in Indian time (UTC+5:30), not the server's UTC clock
+  const today = new Date(Date.now() + 5.5 * 3600 * 1000);
+  const y = today.getUTCFullYear();
+  const m = pad(today.getUTCMonth() + 1, 2);
+  const d = pad(today.getUTCDate(), 2);
   const safeWard = String(regionCode).replace(/[^A-Za-z0-9-]/g, '').slice(0, 12) || 'IN';
   const prefix = `NM-${safeWard}-${y}${m}${d}`;
   const count = await this.countDocuments({ reportId: new RegExp(`^${prefix}-`) });

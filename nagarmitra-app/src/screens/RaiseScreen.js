@@ -1,8 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import { View, Text, TextInput, Alert, ScrollView, Image, TouchableOpacity, StyleSheet, FlatList, Modal, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
-import { complaintAPI, detectAPI, errorMessage } from '../api/client';
+import { complaintAPI, detectAPI, userAPI, errorMessage, ApiError } from '../api/client';
+import { reportClientError } from '../services/crashReporter';
 import { CATEGORIES, PRIORITIES } from '../constants';
 import { toCompressedDataUri } from '../utils/image';
 import LocationPicker from '../components/LocationPicker';
@@ -14,7 +16,7 @@ const MAX_IMAGES = 3;
 const MIN_DESCRIPTION = 10;
 
 export default function RaiseScreen({ navigation }) {
-  const { me, meta } = useSession();
+  const { me, meta, refreshMe } = useSession();
   const [place, setPlace] = useState({ state: null, district: null });
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState(CATEGORIES[0]);
@@ -33,6 +35,13 @@ export default function RaiseScreen({ navigation }) {
   useEffect(() => {
     if (me?.state && !place.state) setPlace({ state: me.state, district: me.district || null });
   }, [me?.state, me?.district]);
+
+  // A brand-new account saves its district right after sign-up; pick it up when the tab opens
+  useFocusEffect(
+    useCallback(() => {
+      if (!me?.state) refreshMe();
+    }, [me?.state, refreshMe])
+  );
 
   const onPlaceChange = (next) => {
     setPlace({ state: next.state, district: next.district });
@@ -160,8 +169,16 @@ export default function RaiseScreen({ navigation }) {
       });
       setReportId(json.reportId || '');
       setShowSuccessModal(true);
+      // First complaint from a citizen without a home district: remember it for next time
+      if (me?.role === 'citizen' && !me.state) {
+        userAPI.updateProfile({ state: place.state, district: place.district }).then(refreshMe).catch(() => {});
+      }
       resetForm();
     } catch (e) {
+      // Validation problems (4xx) are shown to the user; anything else is reported for diagnosis
+      if (!(e instanceof ApiError) || !e.status || e.status >= 500) {
+        reportClientError({ kind: 'complaint_submit_failed', message: `${e?.status || ''} ${e?.message || e}`, screen: 'Raise' });
+      }
       Alert.alert('Could not submit', errorMessage(e, 'Your complaint could not be submitted. Please try again.'));
     } finally {
       setLoading(false);

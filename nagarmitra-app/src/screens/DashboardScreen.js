@@ -90,6 +90,13 @@ export default function DashboardScreen({ navigation }) {
   const [showMap, setShowMap] = useState(false);
   const [heatmapMode, setHeatmapMode] = useState('markers'); // 'heatmap' | 'markers'
   const [userLocation, setUserLocation] = useState(null);
+  const [search, setSearch] = useState('');
+  const [term, setTerm] = useState('');
+
+  useEffect(() => {
+    const t = setTimeout(() => setTerm(search.trim()), 400);
+    return () => clearTimeout(t);
+  }, [search]);
 
   // Location is optional: the map simply doesn't show "you are here" without it
   useEffect(() => {
@@ -115,6 +122,7 @@ export default function DashboardScreen({ navigation }) {
         mine: onlyMine ? 1 : undefined,
         status: statusFilter || undefined,
         limit: 50,
+        search: term || undefined,
         ...(onlyMine ? {} : areaParams),
       });
       setItems(Array.isArray(json.items) ? json.items : []);
@@ -124,7 +132,7 @@ export default function DashboardScreen({ navigation }) {
     } finally {
       setLoading(false);
     }
-  }, [onlyMine, statusFilter, area, me?.state, me?.district]);
+  }, [onlyMine, statusFilter, area, term, me?.state, me?.district]);
 
   const loadCounts = useCallback(async () => {
     // Each count is independent so one failure doesn't blank the others
@@ -337,6 +345,25 @@ export default function DashboardScreen({ navigation }) {
             </View>
           </View>
 
+          <View style={styles.listSearch}>
+            <Ionicons name="search" size={18} color={tct('#999')} />
+            <TextInput
+              style={styles.listSearchInput}
+              value={search}
+              onChangeText={setSearch}
+              placeholder="Search issues by ID, words or address"
+              placeholderTextColor={tc('#999')}
+              autoCorrect={false}
+              returnKeyType="search"
+              onSubmitEditing={() => setTerm(search.trim())}
+            />
+            {!!search && (
+              <TouchableOpacity onPress={() => { setSearch(''); setTerm(''); }}>
+                <Ionicons name="close-circle" size={18} color={tct('#999')} />
+              </TouchableOpacity>
+            )}
+          </View>
+
           {loading && items.length === 0 ? (
             <ActivityIndicator color={tct('#FF4500')} style={{ marginVertical: 24 }} />
           ) : listError ? (
@@ -374,6 +401,23 @@ export default function DashboardScreen({ navigation }) {
 }
 
 const styles = themedStyles(() => StyleSheet.create({
+  listSearch: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    backgroundColor: tc('#F8F9FA'),
+    borderWidth: 1,
+    borderColor: tc('#E5E5E5'),
+    marginBottom: 12
+  },
+  listSearchInput: {
+    flex: 1,
+    fontSize: 14,
+    color: tct('#1A1A1A'),
+    paddingVertical: 9
+  },
   areaRow: {
     flexDirection: 'row',
     gap: 8,
