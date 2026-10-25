@@ -6,63 +6,40 @@ import {
   TouchableOpacity,
   ScrollView,
   FlatList,
+  ActivityIndicator,
   RefreshControl,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { userAPI, errorMessage } from '../api/client';
 
 const NotificationsScreen = ({ navigation }) => {
   const [notifications, setNotifications] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
   const [filter, setFilter] = useState('all'); // all, confirmed, acknowledged, resolved
 
-  // Mock notifications data - replace with API call
-  const mockNotifications = [
-    {
-      id: '1',
-      title: 'Report Resolved! 🎉',
-      message: 'Great news! Your reported pothole on MG Road has been resolved',
-      type: 'resolved',
-      reportId: 'NM2024001234',
-      timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000), // 2 hours ago
-      read: false,
-    },
-    {
-      id: '2',
-      title: 'Report Under Review 🔍',
-      message: 'Authorities are reviewing your report about street lighting',
-      type: 'acknowledged',
-      reportId: 'NM2024001233',
-      timestamp: new Date(Date.now() - 5 * 60 * 60 * 1000), // 5 hours ago
-      read: true,
-    },
-    {
-      id: '3',
-      title: 'Report Confirmed ✅',
-      message: 'Your report #NM2024001232 has been received by authorities',
-      type: 'confirmed',
-      reportId: 'NM2024001232',
-      timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000), // 1 day ago
-      read: true,
-    },
-    {
-      id: '4',
-      title: 'Report Resolved! 🎉',
-      message: 'Your reported garbage issue on Park Street has been resolved',
-      type: 'resolved',
-      reportId: 'NM2024001231',
-      timestamp: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000), // 3 days ago
-      read: true,
-    },
-    {
-      id: '5',
-      title: 'Report Under Review 🔍',
-      message: 'Water supply complaint is being investigated by the authorities',
-      type: 'acknowledged',
-      reportId: 'NM2024001230',
-      timestamp: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000), // 1 week ago
-      read: true,
-    },
-  ];
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  // Server notification types → the three tabs this screen shows
+  const TAB_FOR_TYPE = {
+    complaint_confirmed: 'confirmed',
+    complaint_assigned: 'acknowledged',
+    complaint_acknowledged: 'acknowledged',
+    complaint_in_progress: 'acknowledged',
+    complaint_reminder: 'acknowledged',
+    complaint_resolved: 'resolved',
+    complaint_rejected: 'resolved',
+  };
+
+  const toItem = (n) => ({
+    id: n._id,
+    type: TAB_FOR_TYPE[n.type] || 'other',
+    title: n.title,
+    message: n.body,
+    reportId: n.data?.reportId || n.relatedComplaint?.reportId || '',
+    timestamp: new Date(n.createdAt),
+    read: !!n.interaction?.isRead,
+  });
 
   useEffect(() => {
     loadNotifications();
@@ -70,10 +47,13 @@ const NotificationsScreen = ({ navigation }) => {
 
   const loadNotifications = async () => {
     try {
-      // Replace with actual API call
-      setNotifications(mockNotifications);
-    } catch (error) {
-      console.error('Error loading notifications:', error);
+      setError('');
+      const res = await userAPI.getNotifications({ limit: 50 });
+      setNotifications((res.notifications || []).map(toItem));
+    } catch (e) {
+      setError(errorMessage(e, 'Could not load notifications.'));
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -81,6 +61,18 @@ const NotificationsScreen = ({ navigation }) => {
     setRefreshing(true);
     await loadNotifications();
     setRefreshing(false);
+  };
+
+  const openNotification = (item) => {
+    if (!item.read) {
+      setNotifications((prev) => prev.map((n) => (n.id === item.id ? { ...n, read: true } : n)));
+      userAPI.markNotificationRead(item.id).catch(() => {});
+    }
+  };
+
+  const markAllRead = () => {
+    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+    userAPI.markAllNotificationsRead().catch(() => {});
   };
 
   const getNotificationIcon = (type) => {
@@ -134,10 +126,7 @@ const NotificationsScreen = ({ navigation }) => {
     return (
       <TouchableOpacity
         style={[styles.notificationItem, !item.read && styles.unreadNotification]}
-        onPress={() => {
-          // Navigate to report details or mark as read
-          navigation.navigate('Dashboard');
-        }}
+        onPress={() => openNotification(item)}
       >
         <View style={styles.notificationContent}>
           <View style={styles.notificationHeader}>
@@ -146,7 +135,7 @@ const NotificationsScreen = ({ navigation }) => {
               <Text style={styles.notificationTitle}>{item.title}</Text>
               <Text style={styles.notificationMessage}>{item.message}</Text>
               <View style={styles.notificationMeta}>
-                <Text style={styles.reportId}>#{item.reportId}</Text>
+                {!!item.reportId && <Text style={styles.reportId}>#{item.reportId}</Text>}
                 <Text style={styles.timestamp}>{getTimeAgo(item.timestamp)}</Text>
               </View>
             </View>
@@ -186,10 +175,12 @@ const NotificationsScreen = ({ navigation }) => {
           <Ionicons name="arrow-back" size={24} color="#FF4500" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Notifications</Text>
-        {unreadCount > 0 && (
-          <View style={styles.unreadBadge}>
-            <Text style={styles.unreadBadgeText}>{unreadCount}</Text>
-          </View>
+        {unreadCount > 0 ? (
+          <TouchableOpacity onPress={markAllRead} style={styles.unreadBadge}>
+            <Text style={styles.unreadBadgeText}>Mark {unreadCount} read</Text>
+          </TouchableOpacity>
+        ) : (
+          <View style={{ width: 24 }} />
         )}
       </View>
 
@@ -204,14 +195,27 @@ const NotificationsScreen = ({ navigation }) => {
       </ScrollView>
 
       {/* Notifications List */}
-      {filteredNotifications.length > 0 ? (
+      {loading ? (
+        <View style={styles.emptyState}>
+          <ActivityIndicator size="large" color="#FF4500" />
+        </View>
+      ) : error ? (
+        <View style={styles.emptyState}>
+          <Ionicons name="cloud-offline-outline" size={64} color="#CCC" />
+          <Text style={styles.emptyStateTitle}>Couldn't load notifications</Text>
+          <Text style={styles.emptyStateMessage}>{error}</Text>
+          <TouchableOpacity onPress={() => { setLoading(true); loadNotifications(); }} style={{ marginTop: 16 }}>
+            <Text style={{ color: '#FF4500', fontWeight: 'bold', fontSize: 16 }}>Try again</Text>
+          </TouchableOpacity>
+        </View>
+      ) : filteredNotifications.length > 0 ? (
         <FlatList
           data={filteredNotifications}
           renderItem={renderNotification}
           keyExtractor={(item) => item.id}
           showsVerticalScrollIndicator={false}
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#FF4500']} />
           }
           contentContainerStyle={styles.listContainer}
         />

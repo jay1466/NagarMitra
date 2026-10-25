@@ -1,57 +1,106 @@
 import { Router } from 'express';
+import { sendError, parsePaging, cleanImage } from '../utils/http.js';
 import CommunityPost from '../models/CommunityPost.js';
 import User from '../models/User.js';
 import Notification from '../models/Notification.js';
-import { requireFirebaseAuth } from '../middleware/firebaseAuth.js';
+import { requireFirebaseAuth, optionalFirebaseAuth } from '../middleware/firebaseAuth.js';
 
 const router = Router();
 
-// Get community posts with filtering and pagination
-router.get('/posts', async (req, res) => {
-  try {
-    const {
-      category = 'all',
-      wardCode,
-      sortBy = 'recent', // recent, trending, popular
-      page = 1,
-      limit = 20
-    } = req.query;
+const POST_CATEGORIES = ['general', 'roads', 'water', 'electricity', 'garbage', 'safety', 'parks', 'noise'];
 
+function authorName(author) {
+  if (!author) return 'Citizen';
+  const full = [author.profile?.firstName, author.profile?.lastName].filter(Boolean).join(' ');
+  return author.displayName || full || 'Citizen';
+}
+
+// The shape the mobile app renders. Anonymous posts never expose who wrote them.
+function toClientPost(post, viewer) {
+  const o = post.toObject ? post.toObject() : post;
+  const viewerId = viewer?._id;
+  const has = (list) => !!viewerId && (list || []).some((id) => String(id) === String(viewerId));
+  const authorId = o.author?._id || o.author;
+  return {
+    id: String(o._id),
+    caption: o.content?.caption || '',
+    image: o.content?.image || null,
+    category: o.category || 'general',
+    location: o.location?.address ? { address: o.location.address } : null,
+    author: o.isAnonymous
+      ? { name: 'Anonymous', avatar: null }
+      : { name: authorName(o.author), avatar: o.author?.photoURL || null },
+    isAnonymous: !!o.isAnonymous,
+    isMine: !!viewerId && String(authorId) === String(viewerId),
+    timestamp: o.createdAt,
+    likesCount: o.metrics?.likes || 0,
+    commentsCount: o.metrics?.comments || 0,
+    upvotes: o.metrics?.upvotes || 0,
+    downvotes: o.metrics?.downvotes || 0,
+    isLiked: has(o.likedBy),
+    userVote: has(o.upvotedBy) ? 'up' : has(o.downvotedBy) ? 'down' : null,
+  };
+}
+
+async function viewerFrom(req) {
+  return req.user?.uid ? User.findByFirebaseUid(req.user.uid) : null;
+}
+
+// Get community posts with filtering and pagination
+router.get('/posts', optionalFirebaseAuth(), async (req, res) => {
+  try {
+    const { category = 'all', wardCode, sortBy = 'recent' } = req.query;
+    const { page, limit } = parsePaging(req.query);
     const options = {
-      category: category !== 'all' ? category : undefined,
-      wardCode,
-      sortBy,
-      page: parseInt(page),
-      limit: parseInt(limit)
+      category: category !== 'all' ? String(category) : undefined,
+      wardCode: wardCode ? String(wardCode) : undefined,
+      sortBy: String(sortBy),
+      page,
+      limit,
     };
 
-    const posts = await CommunityPost.findPublicPosts(options);
-    const total = await CommunityPost.countDocuments({
-      isPublic: true,
-      isActive: true,
-      ...(options.category && { category: options.category }),
-      ...(options.wardCode && { 'location.wardCode': options.wardCode })
-    });
+    const [posts, total, viewer] = await Promise.all([
+      CommunityPost.findPublicPosts(options),
+      CommunityPost.countDocuments({
+        isPublic: true,
+        isActive: true,
+        ...(options.category && { category: options.category }),
+        ...(options.wardCode && { 'location.wardCode': options.wardCode }),
+      }),
+      viewerFrom(req),
+    ]);
 
     return res.json({
-      posts: posts.map(post => ({
-        ...post.toObject(),
-        // Add user interaction status if authenticated
-        isLiked: req.user ? post.likedBy.includes(req.user._id) : false,
-        userVote: req.user ? (
-          post.upvotedBy.includes(req.user._id) ? 'up' :
-          post.downvotedBy.includes(req.user._id) ? 'down' : null
-        ) : null
-      })),
-      pagination: {
-        current: parseInt(page),
-        total: Math.ceil(total / parseInt(limit)),
-        count: posts.length,
-        totalPosts: total
-      }
+      posts: posts.map((p) => toClientPost(p, viewer)),
+      pagination: { current: page, total: Math.ceil(total / limit), count: posts.length, totalPosts: total },
     });
   } catch (err) {
-    return res.status(500).json({ error: err.message });
+    return sendError(res, err);
+  }
+});
+
+// Stories: the latest post from each person in the last 24 hours
+router.get('/stories', async (_req, res) => {
+  try {
+    const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const posts = await CommunityPost.find({ isPublic: true, isActive: true, createdAt: { $gte: since } })
+      .populate('author', 'displayName photoURL profile.firstName profile.lastName')
+      .sort({ createdAt: -1 })
+      .limit(100);
+
+    const seen = new Set();
+    const stories = [];
+    for (const p of posts) {
+      const key = p.isAnonymous ? `anon-${p._id}` : String(p.author?._id || p._id);
+      if (seen.has(key)) continue;
+      seen.add(key);
+      const post = toClientPost(p);
+      stories.push({ id: post.id, username: post.author.name, avatar: post.author.avatar, image: post.image, caption: post.caption, viewed: false });
+      if (stories.length >= 20) break;
+    }
+    return res.json({ stories });
+  } catch (err) {
+    return sendError(res, err);
   }
 });
 
@@ -72,7 +121,7 @@ router.get('/posts/trending', async (req, res) => {
       }))
     });
   } catch (err) {
-    return res.status(500).json({ error: err.message });
+    return sendError(res, err);
   }
 });
 
@@ -87,8 +136,14 @@ router.post('/posts', requireFirebaseAuth({ requireVerified: false }), async (re
       isAnonymous = false
     } = req.body;
 
-    if (!caption || caption.trim().length === 0) {
-      return res.status(400).json({ error: 'Caption is required' });
+    if (typeof caption !== 'string' || caption.trim().length === 0) {
+      return res.status(400).json({ error: 'Please write something for your post' });
+    }
+    if (caption.trim().length > 500) {
+      return res.status(400).json({ error: 'Post is too long (max 500 characters)' });
+    }
+    if (!POST_CATEGORIES.includes(category)) {
+      return res.status(400).json({ error: 'Invalid category' });
     }
 
     // Find or create user
@@ -104,11 +159,11 @@ router.post('/posts', requireFirebaseAuth({ requireVerified: false }), async (re
       author: user._id,
       content: {
         caption: caption.trim(),
-        image,
+        image: cleanImage(image),
         hashtags: hashtags.map(tag => tag.toLowerCase())
       },
       category,
-      isAnonymous,
+      isAnonymous: !!isAnonymous,
       isPublic: true,
       isActive: true
     };
@@ -136,14 +191,10 @@ router.post('/posts', requireFirebaseAuth({ requireVerified: false }), async (re
     await user.save();
 
     return res.status(201).json({
-      post: {
-        ...post.toObject(),
-        isLiked: false,
-        userVote: null
-      }
+      post: toClientPost(post, user)
     });
   } catch (err) {
-    return res.status(500).json({ error: err.message });
+    return sendError(res, err);
   }
 });
 
@@ -175,7 +226,7 @@ router.get('/posts/:postId', async (req, res) => {
       }
     });
   } catch (err) {
-    return res.status(500).json({ error: err.message });
+    return sendError(res, err);
   }
 });
 
@@ -199,7 +250,7 @@ router.post('/posts/:postId/like', requireFirebaseAuth({ requireVerified: false 
     await post.toggleLike(user._id);
 
     // Create notification if it was a new like (not unlike) and not self-like
-    if (!wasLiked && !post.author._id.equals(user._id)) {
+    if (!wasLiked && post.author?._id && !post.author._id.equals(user._id)) {
       await Notification.createCommunityNotification(
         post,
         'community_like',
@@ -214,7 +265,7 @@ router.post('/posts/:postId/like', requireFirebaseAuth({ requireVerified: false 
       likesCount: post.metrics.likes + (wasLiked ? -1 : 1)
     });
   } catch (err) {
-    return res.status(500).json({ error: err.message });
+    return sendError(res, err);
   }
 });
 
@@ -255,7 +306,7 @@ router.post('/posts/:postId/vote', requireFirebaseAuth({ requireVerified: false 
       netScore: post.netScore
     });
   } catch (err) {
-    return res.status(500).json({ error: err.message });
+    return sendError(res, err);
   }
 });
 
@@ -275,7 +326,7 @@ router.post('/posts/:postId/share', requireFirebaseAuth({ requireVerified: false
       sharesCount: post.metrics.shares
     });
   } catch (err) {
-    return res.status(500).json({ error: err.message });
+    return sendError(res, err);
   }
 });
 
@@ -316,7 +367,7 @@ router.post('/posts/:postId/report', requireFirebaseAuth({ requireVerified: fals
 
     return res.json({ success: true, message: 'Post reported successfully' });
   } catch (err) {
-    return res.status(500).json({ error: err.message });
+    return sendError(res, err);
   }
 });
 
@@ -346,7 +397,7 @@ router.delete('/posts/:postId', requireFirebaseAuth({ requireVerified: false }),
 
     return res.json({ success: true, message: 'Post deleted successfully' });
   } catch (err) {
-    return res.status(500).json({ error: err.message });
+    return sendError(res, err);
   }
 });
 
@@ -381,7 +432,7 @@ router.get('/users/:userId/posts', async (req, res) => {
       }
     });
   } catch (err) {
-    return res.status(500).json({ error: err.message });
+    return sendError(res, err);
   }
 });
 
@@ -420,7 +471,7 @@ router.get('/stats', async (req, res) => {
       generatedAt: new Date()
     });
   } catch (err) {
-    return res.status(500).json({ error: err.message });
+    return sendError(res, err);
   }
 });
 

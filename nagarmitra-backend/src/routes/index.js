@@ -6,6 +6,7 @@ import communityRouter from './community.js';
 import usersRouter from './users.js';
 import analyticsRouter from './analytics.js';
 import detectRouter from './detect.js';
+import feedbackRouter from './feedback.js';
 
 const router = Router();
 
@@ -16,5 +17,6 @@ router.use('/community', communityRouter);
 router.use('/users', usersRouter);
 router.use('/analytics', analyticsRouter);
 router.use('/detect', detectRouter);
+router.use('/feedback', feedbackRouter);
 
 export default router;

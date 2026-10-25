@@ -8,6 +8,7 @@ import {
   Alert,
   Image,
 } from 'react-native';
+import { APP_VERSION, RELEASE_DATE, COPYRIGHT_YEAR } from '../appInfo';
 import { Ionicons } from '@expo/vector-icons';
 import { auth, signOut } from '../lib/firebase';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -145,7 +146,7 @@ const OthersScreen = ({ navigation }) => {
 
       {/* App Version */}
       <View style={styles.footer}>
-        <Text style={styles.versionText}>NagarMitra v1.0.0</Text>
+        <Text style={styles.versionText}>NagarMitra v{APP_VERSION}</Text>
         <Text style={styles.footerText}>जन की आवाज, सरकार का समाधान</Text>
       </View>
     </ScrollView>

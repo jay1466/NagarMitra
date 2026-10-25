@@ -33,7 +33,7 @@ const ComplaintSchema = new mongoose.Schema(
     },
     address: { type: String },
     location: {
-      type: { type: String, enum: ['Point'], default: 'Point' },
+      type: { type: String, enum: ['Point'] },
       coordinates: { type: [Number], index: '2dsphere' }, // [lng, lat]
     },
     wardCode: { type: String, index: true },
@@ -144,11 +144,23 @@ ComplaintSchema.statics.generateReportId = async function (wardCode = 'WARD') {
   const y = today.getFullYear();
   const m = pad(today.getMonth() + 1, 2);
   const d = pad(today.getDate(), 2);
-  // naive sequence per day
-  const prefix = `NM-${wardCode}-${y}${m}${d}`;
-  const count = await this.countDocuments({ reportId: new RegExp(`^${prefix}`) });
-  const seq = pad(count + 1, 4);
-  return `${prefix}-${seq}`;
+  const safeWard = String(wardCode).replace(/[^A-Za-z0-9-]/g, '').slice(0, 12) || 'WARD';
+  const prefix = `NM-${safeWard}-${y}${m}${d}`;
+  const count = await this.countDocuments({ reportId: new RegExp(`^${prefix}-`) });
+  return `${prefix}-${pad(count + 1, 4)}`;
+};
+
+// Two reports submitted at the same moment can get the same sequence number;
+// retry with the next number instead of failing the user's submission.
+ComplaintSchema.statics.createWithReportId = async function (wardCode, data, attempts = 5) {
+  for (let i = 0; i < attempts; i++) {
+    const reportId = await this.generateReportId(wardCode);
+    try {
+      return await this.create({ ...data, reportId });
+    } catch (err) {
+      if (err?.code !== 11000 || i === attempts - 1) throw err;
+    }
+  }
 };
 
 // Instance methods

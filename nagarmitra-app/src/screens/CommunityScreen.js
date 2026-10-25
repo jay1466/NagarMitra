@@ -19,7 +19,8 @@ import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
 import { auth } from '../lib/firebase';
-import { apiGet, apiPost } from '../api/client';
+import { communityAPI, errorMessage } from '../api/client';
+import { toCompressedDataUri } from '../utils/image';
 
 const { width, height } = Dimensions.get('window');
 
@@ -36,6 +37,8 @@ export default function CommunityScreen({ navigation }) {
     isAnonymous: false
   });
   const [stories, setStories] = useState([]);
+  const [loadError, setLoadError] = useState('');
+  const [activeStory, setActiveStory] = useState(null);
   const scrollY = useRef(new Animated.Value(0)).current;
 
   const categories = [
@@ -57,15 +60,11 @@ export default function CommunityScreen({ navigation }) {
   const loadCommunityPosts = async () => {
     try {
       setLoading(true);
-      const response = await apiGet('/api/v1/community/posts');
-      // Use mock data if no posts are returned
-      const postsData = response.posts && response.posts.length > 0 ? response.posts : mockPosts;
-      setPosts(postsData);
-      console.log(`📱 Loaded ${postsData.length} community posts (${response.posts?.length || 0} from API, ${postsData === mockPosts ? mockPosts.length : 0} mock)`);
+      setLoadError('');
+      const response = await communityAPI.getPosts({ limit: 30 });
+      setPosts(Array.isArray(response.posts) ? response.posts : []);
     } catch (error) {
-      console.log('Error loading posts:', error);
-      setPosts(mockPosts); // Use mock data if API fails
-      console.log(`📱 Using ${mockPosts.length} mock posts due to API error`);
+      setLoadError(errorMessage(error, 'Could not load community posts.'));
     } finally {
       setLoading(false);
     }
@@ -73,15 +72,10 @@ export default function CommunityScreen({ navigation }) {
 
   const loadStories = async () => {
     try {
-      const response = await apiGet('/api/v1/community/stories');
-      // Use mock data if no stories are returned
-      const storiesData = response.stories && response.stories.length > 0 ? response.stories : mockStories;
-      setStories(storiesData);
-      console.log(`📸 Loaded ${storiesData.length} community stories`);
-    } catch (error) {
-      console.log('Error loading stories:', error);
-      setStories(mockStories);
-      console.log(`📸 Using ${mockStories.length} mock stories due to API error`);
+      const response = await communityAPI.getStories();
+      setStories(Array.isArray(response.stories) ? response.stories : []);
+    } catch {
+      setStories([]);
     }
   };
 
@@ -91,185 +85,178 @@ export default function CommunityScreen({ navigation }) {
     setRefreshing(false);
   };
 
-  const handleLike = async (postId) => {
-    try {
-      const updatedPosts = posts.map(post => {
-        if (post.id === postId) {
-          const isLiked = post.isLiked;
-          return {
-            ...post,
-            isLiked: !isLiked,
-            likesCount: isLiked ? post.likesCount - 1 : post.likesCount + 1
-          };
-        }
-        return post;
-      });
-      setPosts(updatedPosts);
+  const patchPost = (postId, patch) =>
+    setPosts((prev) => prev.map((p) => (p.id === postId ? { ...p, ...patch } : p)));
 
-      // API call to update like status
-      await apiPost(`/api/v1/community/posts/${postId}/like`, {});
+  // Optimistic like: update immediately, then trust the server's answer (or roll back)
+  const handleLike = async (postId) => {
+    const post = posts.find((p) => p.id === postId);
+    if (!post) return;
+    patchPost(postId, { isLiked: !post.isLiked, likesCount: post.likesCount + (post.isLiked ? -1 : 1) });
+    try {
+      const res = await communityAPI.likePost(postId);
+      patchPost(postId, { isLiked: !!res.isLiked, likesCount: res.likesCount ?? post.likesCount });
     } catch (error) {
-      console.log('Error updating like:', error);
+      patchPost(postId, { isLiked: post.isLiked, likesCount: post.likesCount });
+      Alert.alert('Could not like post', errorMessage(error));
     }
   };
 
   const handleVote = async (postId, voteType) => {
+    const post = posts.find((p) => p.id === postId);
+    if (!post) return;
+    let { upvotes, downvotes } = post;
+    let userVote = post.userVote;
+    if (voteType === 'up') {
+      if (userVote === 'up') { upvotes -= 1; userVote = null; }
+      else { upvotes += 1; if (userVote === 'down') downvotes -= 1; userVote = 'up'; }
+    } else {
+      if (userVote === 'down') { downvotes -= 1; userVote = null; }
+      else { downvotes += 1; if (userVote === 'up') upvotes -= 1; userVote = 'down'; }
+    }
+    patchPost(postId, { upvotes, downvotes, userVote });
     try {
-      const updatedPosts = posts.map(post => {
-        if (post.id === postId) {
-          let newUpvotes = post.upvotes;
-          let newDownvotes = post.downvotes;
-          
-          if (voteType === 'up') {
-            if (post.userVote === 'up') {
-              newUpvotes -= 1;
-              post.userVote = null;
-            } else {
-              newUpvotes += 1;
-              if (post.userVote === 'down') newDownvotes -= 1;
-              post.userVote = 'up';
-            }
-          } else {
-            if (post.userVote === 'down') {
-              newDownvotes -= 1;
-              post.userVote = null;
-            } else {
-              newDownvotes += 1;
-              if (post.userVote === 'up') newUpvotes -= 1;
-              post.userVote = 'down';
-            }
-          }
-          
-          return { ...post, upvotes: newUpvotes, downvotes: newDownvotes };
-        }
-        return post;
-      });
-      setPosts(updatedPosts);
-
-      await apiPost(`/api/v1/community/posts/${postId}/vote`, { type: voteType });
+      const res = await communityAPI.votePost(postId, voteType);
+      patchPost(postId, { upvotes: res.upvotes, downvotes: res.downvotes, userVote: res.userVote });
     } catch (error) {
-      console.log('Error updating vote:', error);
+      patchPost(postId, { upvotes: post.upvotes, downvotes: post.downvotes, userVote: post.userVote });
+      Alert.alert('Could not vote', errorMessage(error));
     }
   };
 
   const handleShare = async (post) => {
     try {
       await Share.share({
-        message: `Check out this post from NagarMitra: ${post.caption}\n\nJoin the community: https://nagarmitra.app`,
-        title: 'NagarMitra Community Post'
+        message: `Check out this post on NagarMitra: ${post.caption}`,
+        title: 'NagarMitra Community Post',
       });
-    } catch (error) {
-      console.log('Error sharing:', error);
+      communityAPI.sharePost(post.id).catch(() => {});
+    } catch {
+      // user dismissed the share sheet
     }
   };
 
   const pickImage = async () => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert('Permission needed', 'Please grant access to your photo library');
-      return;
-    }
-
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [4, 3],
-      quality: 0.8,
-    });
-
-    if (!result.canceled) {
-      setNewPost(prev => ({ ...prev, image: result.assets[0] }));
+    try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission needed', 'Please allow photo access in your phone settings.');
+        return;
+      }
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.8,
+      });
+      if (!result.canceled && result.assets?.length) setNewPost((prev) => ({ ...prev, image: result.assets[0] }));
+    } catch {
+      Alert.alert('Error', 'Could not open your gallery.');
     }
   };
 
   const takePhoto = async () => {
-    const { status } = await ImagePicker.requestCameraPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert('Permission needed', 'Please grant camera access');
-      return;
-    }
-
-    const result = await ImagePicker.launchCameraAsync({
-      allowsEditing: true,
-      aspect: [4, 3],
-      quality: 0.8,
-    });
-
-    if (!result.canceled) {
-      setNewPost(prev => ({ ...prev, image: result.assets[0] }));
+    try {
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission needed', 'Please allow camera access in your phone settings.');
+        return;
+      }
+      const result = await ImagePicker.launchCameraAsync({ allowsEditing: true, aspect: [4, 3], quality: 0.8 });
+      if (!result.canceled && result.assets?.length) setNewPost((prev) => ({ ...prev, image: result.assets[0] }));
+    } catch {
+      Alert.alert('Error', 'Could not open the camera.');
     }
   };
 
   const getCurrentLocation = async () => {
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status === 'granted') {
-        const location = await Location.getCurrentPositionAsync({});
-        const address = await Location.reverseGeocodeAsync({
+      if (status !== 'granted') {
+        Alert.alert('Permission needed', 'Please allow location access to tag your post.');
+        return;
+      }
+      const location = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+      let address = 'Current location';
+      try {
+        const [g] = await Location.reverseGeocodeAsync({
           latitude: location.coords.latitude,
           longitude: location.coords.longitude,
         });
-        
-        setNewPost(prev => ({
-          ...prev,
-          location: {
-            coords: location.coords,
-            address: address[0] ? `${address[0].street}, ${address[0].city}` : 'Current Location'
-          }
-        }));
+        if (g) address = [g.street || g.name, g.city].filter(Boolean).join(', ') || address;
+      } catch {
+        // keep generic label
       }
-    } catch (error) {
-      console.log('Error getting location:', error);
+      setNewPost((prev) => ({
+        ...prev,
+        location: { address, coordinates: [location.coords.longitude, location.coords.latitude] },
+      }));
+    } catch {
+      Alert.alert('Location error', 'Could not get your location. Make sure GPS is on.');
     }
   };
 
   const submitPost = async () => {
-    if (!newPost.caption.trim() && !newPost.image) {
-      Alert.alert('Error', 'Please add a caption or image');
+    if (!newPost.caption.trim()) {
+      Alert.alert('Add a caption', 'Please write something about your post.');
       return;
     }
-
     try {
       setLoading(true);
-      
-      const postData = {
-        caption: newPost.caption,
+      const image = newPost.image ? await toCompressedDataUri(newPost.image.uri, { maxWidth: 900 }) : undefined;
+      const res = await communityAPI.createPost({
+        caption: newPost.caption.trim(),
         category: newPost.category,
-        location: newPost.location,
+        location: newPost.location || undefined,
         isAnonymous: newPost.isAnonymous,
-        image: newPost.image?.uri
-      };
-
-      await apiPost('/api/v1/community/posts', postData);
-      
-      // Add to local state immediately for better UX
-      const newPostObj = {
-        id: Date.now().toString(),
-        ...postData,
-        author: newPost.isAnonymous ? { name: 'Anonymous', avatar: null } : {
-          name: auth.currentUser?.displayName || 'User',
-          avatar: auth.currentUser?.photoURL
-        },
-        timestamp: new Date().toISOString(),
-        likesCount: 0,
-        commentsCount: 0,
-        upvotes: 0,
-        downvotes: 0,
-        isLiked: false,
-        userVote: null
-      };
-
-      setPosts(prev => [newPostObj, ...prev]);
+        image,
+      });
+      if (res.post) setPosts((prev) => [res.post, ...prev]);
       setShowCreateModal(false);
       setNewPost({ image: null, caption: '', location: null, category: 'general', isAnonymous: false });
-      
+      loadStories();
     } catch (error) {
-      console.log('Error creating post:', error);
-      Alert.alert('Error', 'Failed to create post. Please try again.');
+      Alert.alert('Could not post', errorMessage(error, 'Failed to create post. Please try again.'));
     } finally {
       setLoading(false);
     }
   };
+
+  const confirmDelete = (post) => {
+    Alert.alert('Delete post?', 'This will remove your post for everyone.', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await communityAPI.deletePost(post.id);
+            setPosts((prev) => prev.filter((p) => p.id !== post.id));
+            loadStories();
+          } catch (error) {
+            Alert.alert('Could not delete', errorMessage(error));
+          }
+        },
+      },
+    ]);
+  };
+
+  const renderStoryViewer = () => (
+    <Modal visible={!!activeStory} transparent animationType="fade" onRequestClose={() => setActiveStory(null)}>
+      <TouchableOpacity style={styles.storyViewer} activeOpacity={1} onPress={() => setActiveStory(null)}>
+        {activeStory && (
+          <>
+            <Text style={styles.storyViewerName}>{activeStory.username}</Text>
+            {activeStory.image ? (
+              <Image source={{ uri: activeStory.image }} style={styles.storyViewerImage} resizeMode="contain" />
+            ) : null}
+            <Text style={styles.storyViewerCaption}>{activeStory.caption}</Text>
+            <Text style={styles.storyViewerHint}>Tap anywhere to close</Text>
+          </>
+        )}
+      </TouchableOpacity>
+    </Modal>
+  );
 
   const renderHeader = () => {
     const headerOpacity = scrollY.interpolate({
@@ -303,9 +290,16 @@ export default function CommunityScreen({ navigation }) {
           <Text style={styles.storyText}>Your Story</Text>
         </TouchableOpacity>
         {stories.map((story) => (
-          <TouchableOpacity key={story.id} style={styles.storyItem}>
+          <TouchableOpacity
+            key={story.id}
+            style={styles.storyItem}
+            onPress={() => {
+              setActiveStory(story);
+              setStories((prev) => prev.map((s) => (s.id === story.id ? { ...s, viewed: true } : s)));
+            }}
+          >
             <View style={[styles.storyRing, { borderColor: story.viewed ? '#DDD' : '#FF4500' }]}>
-              <Image source={{ uri: story.avatar }} style={styles.storyAvatar} />
+              <Avatar uri={story.image || story.avatar} name={story.username} style={styles.storyAvatar} />
             </View>
             <Text style={styles.storyText} numberOfLines={1}>{story.username}</Text>
           </TouchableOpacity>
@@ -319,12 +313,9 @@ export default function CommunityScreen({ navigation }) {
       {/* Post Header */}
       <View style={styles.postHeader}>
         <View style={styles.postAuthorInfo}>
-          <Image 
-            source={{ uri: post.author.avatar || 'https://via.placeholder.com/40' }} 
-            style={styles.authorAvatar} 
-          />
+          <Avatar uri={post.author?.avatar} name={post.author?.name} style={styles.authorAvatar} />
           <View>
-            <Text style={styles.authorName}>{post.author.name}</Text>
+            <Text style={styles.authorName}>{post.author?.name || 'Citizen'}</Text>
             <View style={styles.postMeta}>
               <Text style={styles.postTime}>{formatTime(post.timestamp)}</Text>
               {post.location && (
@@ -340,11 +331,13 @@ export default function CommunityScreen({ navigation }) {
         <View style={styles.postHeaderActions}>
           <View style={[styles.categoryBadge, { backgroundColor: getCategoryColor(post.category) }]}>
             <Ionicons name={getCategoryIcon(post.category)} size={12} color="#FFF" />
-            <Text style={styles.categoryText}>{post.category.toUpperCase()}</Text>
+            <Text style={styles.categoryText}>{String(post.category || 'general').toUpperCase()}</Text>
           </View>
-          <TouchableOpacity style={styles.postMenuButton}>
-            <Ionicons name="ellipsis-horizontal" size={20} color="#666" />
-          </TouchableOpacity>
+          {post.isMine && (
+            <TouchableOpacity style={styles.postMenuButton} onPress={() => confirmDelete(post)}>
+              <Ionicons name="trash-outline" size={20} color="#999" />
+            </TouchableOpacity>
+          )}
         </View>
       </View>
 
@@ -416,7 +409,7 @@ export default function CommunityScreen({ navigation }) {
   );
 
   const renderCreateModal = () => (
-    <Modal visible={showCreateModal} animationType="slide" presentationStyle="pageSheet">
+    <Modal visible={showCreateModal} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setShowCreateModal(false)}>
       <View style={styles.modalContainer}>
         <View style={styles.modalHeader}>
           <TouchableOpacity onPress={() => setShowCreateModal(false)}>
@@ -532,7 +525,7 @@ export default function CommunityScreen({ navigation }) {
       {renderHeader()}
       <Animated.ScrollView
         style={styles.scrollView}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#FF4500']} />}
         onScroll={Animated.event(
           [{ nativeEvent: { contentOffset: { y: scrollY } } }],
           { useNativeDriver: false }
@@ -540,6 +533,12 @@ export default function CommunityScreen({ navigation }) {
         scrollEventThrottle={16}
       >
         {renderStories()}
+        {loadError ? (
+          <TouchableOpacity style={styles.errorBanner} onPress={onRefresh}>
+            <Ionicons name="cloud-offline-outline" size={18} color="#DC3545" />
+            <Text style={styles.errorBannerText}>{loadError} Tap to retry.</Text>
+          </TouchableOpacity>
+        ) : null}
         {loading && posts.length === 0 ? (
           <View style={styles.loadingContainer}>
             <Text style={styles.loadingText}>Loading posts...</Text>
@@ -562,6 +561,18 @@ export default function CommunityScreen({ navigation }) {
         )}
       </Animated.ScrollView>
       {renderCreateModal()}
+      {renderStoryViewer()}
+    </View>
+  );
+}
+
+// Photo when there is one, otherwise the person's initial
+function Avatar({ uri, name, style }) {
+  if (uri) return <Image source={{ uri }} style={style} />;
+  const initial = (name || '?').trim().charAt(0).toUpperCase() || '?';
+  return (
+    <View style={[style, { backgroundColor: '#FFE1D4', alignItems: 'center', justifyContent: 'center' }]}>
+      <Text style={{ color: '#FF4500', fontWeight: 'bold', fontSize: 16 }}>{initial}</Text>
     </View>
   );
 }
@@ -610,146 +621,59 @@ const getCategoryIcon = (category) => {
   return icons[category] || 'chatbubble';
 };
 
-// Mock data for development
-const mockPosts = [
-  {
-    id: '1',
-    _id: '1',
-    author: { 
-      name: 'Raj Patel', 
-      displayName: 'Raj Patel',
-      avatar: 'https://i.pravatar.cc/150?img=1' 
-    },
-    timestamp: new Date(Date.now() - 3600000).toISOString(),
-    createdAt: new Date(Date.now() - 3600000).toISOString(),
-    caption: 'Pothole on MG Road causing traffic jams every morning. When will this be fixed? 😧',
-    content: {
-      caption: 'Pothole on MG Road causing traffic jams every morning. When will this be fixed? 😧'
-    },
-    image: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&h=300&fit=crop',
-    category: 'roads',
-    location: { address: 'MG Road, Bhubaneswar' },
-    likesCount: 24,
-    commentsCount: 8,
-    upvotes: 156,
-    downvotes: 3,
-    isLiked: false,
-    userVote: null,
-    metrics: {
-      likes: 24,
-      comments: 8,
-      shares: 5,
-      views: 340
-    }
-  },
-  {
-    id: '2',
-    _id: '2',
-    author: { 
-      name: 'Priya Singh', 
-      displayName: 'Priya Singh',
-      avatar: 'https://i.pravatar.cc/150?img=2' 
-    },
-    timestamp: new Date(Date.now() - 7200000).toISOString(),
-    createdAt: new Date(Date.now() - 7200000).toISOString(),
-    caption: 'New park in Saheed Nagar looks amazing! Great job by the municipal corporation 👏',
-    content: {
-      caption: 'New park in Saheed Nagar looks amazing! Great job by the municipal corporation 👏'
-    },
-    image: 'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=400&h=300&fit=crop',
-    category: 'parks',
-    location: { address: 'Saheed Nagar, Bhubaneswar' },
-    likesCount: 89,
-    commentsCount: 15,
-    upvotes: 234,
-    downvotes: 5,
-    isLiked: true,
-    userVote: 'up',
-    metrics: {
-      likes: 89,
-      comments: 15,
-      shares: 12,
-      views: 567
-    }
-  },
-  {
-    id: '3',
-    _id: '3',
-    author: { 
-      name: 'Anonymous', 
-      displayName: 'Anonymous',
-      avatar: 'https://i.pravatar.cc/150?img=15' 
-    },
-    timestamp: new Date(Date.now() - 10800000).toISOString(),
-    createdAt: new Date(Date.now() - 10800000).toISOString(),
-    caption: 'Water supply has been irregular for the past week in Unit 4. Please look into this urgently.',
-    content: {
-      caption: 'Water supply has been irregular for the past week in Unit 4. Please look into this urgently.'
-    },
-    category: 'water',
-    location: { address: 'Unit 4, Bhubaneswar' },
-    likesCount: 67,
-    commentsCount: 12,
-    upvotes: 89,
-    downvotes: 2,
-    isLiked: false,
-    userVote: 'up',
-    metrics: {
-      likes: 67,
-      comments: 12,
-      shares: 8,
-      views: 289
-    }
-  },
-  {
-    id: '4',
-    _id: '4',
-    author: { 
-      name: 'Amit Kumar', 
-      displayName: 'Amit Kumar',
-      avatar: 'https://i.pravatar.cc/150?img=5' 
-    },
-    timestamp: new Date(Date.now() - 14400000).toISOString(),
-    createdAt: new Date(Date.now() - 14400000).toISOString(),
-    caption: 'Electricity outage in Chandrasekharpur since morning. Any updates? ⚡',
-    content: {
-      caption: 'Electricity outage in Chandrasekharpur since morning. Any updates? ⚡'
-    },
-    category: 'electricity',
-    location: { address: 'Chandrasekharpur, Bhubaneswar' },
-    likesCount: 45,
-    commentsCount: 18,
-    upvotes: 78,
-    downvotes: 1,
-    isLiked: false,
-    userVote: null,
-    metrics: {
-      likes: 45,
-      comments: 18,
-      shares: 6,
-      views: 234
-    }
-  }
-];
-
-const mockStories = [
-  { id: '1', username: 'RajP', avatar: 'https://i.pravatar.cc/150?img=1', viewed: false },
-  { id: '2', username: 'PriyaS', avatar: 'https://i.pravatar.cc/150?img=2', viewed: true },
-  { id: '3', username: 'ArunK', avatar: 'https://i.pravatar.cc/150?img=3', viewed: false },
-  { id: '4', username: 'SitaM', avatar: 'https://i.pravatar.cc/150?img=4', viewed: true },
-];
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#FFF'
+  },
+  errorBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#FFEBEE',
+    padding: 12,
+    margin: 12,
+    borderRadius: 8
+  },
+  errorBannerText: {
+    flex: 1,
+    color: '#DC3545',
+    fontSize: 13
+  },
+  storyViewer: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.92)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 20
+  },
+  storyViewerName: {
+    color: '#FFF',
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 16
+  },
+  storyViewerImage: {
+    width: '100%',
+    height: '60%'
+  },
+  storyViewerCaption: {
+    color: '#FFF',
+    fontSize: 16,
+    textAlign: 'center',
+    marginTop: 16
+  },
+  storyViewerHint: {
+    color: '#AAA',
+    fontSize: 12,
+    marginTop: 24
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 16,
-    paddingTop: Platform.OS === 'ios' ? 50 : 20,
+    paddingTop: 12,
     paddingBottom: 12,
     backgroundColor: '#FFF',
     borderBottomWidth: 1,
@@ -965,7 +889,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 16,
-    paddingTop: Platform.OS === 'ios' ? 50 : 20,
+    paddingTop: 12,
     paddingBottom: 12,
     borderBottomWidth: 1,
     borderBottomColor: '#E5E5E5'
@@ -1030,6 +954,7 @@ const styles = StyleSheet.create({
     color: '#666'
   },
   captionInput: {
+    color: "#1A1A1A",
     borderWidth: 1,
     borderColor: '#E5E5E5',
     borderRadius: 12,

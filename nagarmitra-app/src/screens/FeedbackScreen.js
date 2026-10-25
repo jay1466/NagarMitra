@@ -11,6 +11,8 @@ import {
   Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { feedbackAPI, errorMessage } from '../api/client';
+import { APP_VERSION } from '../appInfo';
 
 const FeedbackScreen = ({ navigation }) => {
   const [feedbackData, setFeedbackData] = useState({
@@ -55,8 +57,14 @@ const FeedbackScreen = ({ navigation }) => {
 
     setSubmitting(true);
     try {
-      // Here you would submit feedback to your backend
-      await submitFeedback(feedbackData);
+      await feedbackAPI.submit({
+        type: feedbackData.type,
+        rating: feedbackData.rating,
+        title: feedbackData.title.trim(),
+        message: feedbackData.message.trim(),
+        contactEmail: feedbackData.email.trim() || undefined,
+        appVersion: APP_VERSION,
+      });
       
       Alert.alert(
         'Thank You!',
@@ -78,20 +86,10 @@ const FeedbackScreen = ({ navigation }) => {
         ]
       );
     } catch (error) {
-      Alert.alert('Error', 'Failed to submit feedback. Please try again later.');
+      Alert.alert('Could not send feedback', errorMessage(error, 'Failed to submit feedback. Please try again later.'));
     } finally {
       setSubmitting(false);
     }
-  };
-
-  const submitFeedback = async (data) => {
-    // Mock API call - replace with actual implementation
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        console.log('Feedback submitted:', data);
-        resolve();
-      }, 1500);
-    });
   };
 
   const isValidEmail = (email) => {
@@ -199,6 +197,7 @@ const FeedbackScreen = ({ navigation }) => {
             Title <Text style={styles.required}>*</Text>
           </Text>
           <TextInput
+            placeholderTextColor="#9A9A9A"
             style={styles.titleInput}
             placeholder={`Enter a brief title for your ${getTypeInfo().label.toLowerCase()}`}
             value={feedbackData.title}
@@ -214,6 +213,7 @@ const FeedbackScreen = ({ navigation }) => {
             Description <Text style={styles.required}>*</Text>
           </Text>
           <TextInput
+            placeholderTextColor="#9A9A9A"
             style={styles.messageInput}
             placeholder={`Please provide detailed information about your ${getTypeInfo().label.toLowerCase()}...`}
             value={feedbackData.message}
@@ -230,6 +230,7 @@ const FeedbackScreen = ({ navigation }) => {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Email (Optional)</Text>
           <TextInput
+            placeholderTextColor="#9A9A9A"
             style={styles.emailInput}
             placeholder="Enter your email if you'd like a response"
             value={feedbackData.email}

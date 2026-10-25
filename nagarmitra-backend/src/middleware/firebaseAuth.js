@@ -30,3 +30,19 @@ export function requireFirebaseAuth({ requireVerified = true } = {}) {
     }
   };
 }
+
+// Attach req.user when a valid token is sent, but never reject the request.
+export function optionalFirebaseAuth() {
+  return async function (req, _res, next) {
+    const authHeader = req.headers.authorization || '';
+    const token = authHeader.startsWith('Bearer ') ? authHeader.slice('Bearer '.length) : null;
+    if (token && firebaseAdmin?.apps?.length) {
+      try {
+        req.user = await firebaseAdmin.auth().verifyIdToken(token);
+      } catch {
+        req.user = undefined;
+      }
+    }
+    next();
+  };
+}

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -8,121 +8,162 @@ import {
   TextInput,
   Alert,
   Image,
+  ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
 import { auth, updateProfile } from '../lib/firebase';
+import { userAPI, errorMessage } from '../api/client';
+import { toCompressedDataUri } from '../utils/image';
+
+const emptyProfile = () => ({
+  displayName: auth.currentUser?.displayName || '',
+  email: auth.currentUser?.email || '',
+  phone: '',
+  photoURL: null,
+  location: { city: '', ward: '', address: '' },
+});
+
+const fromServer = (u) => ({
+  displayName: u?.displayName || auth.currentUser?.displayName || '',
+  email: u?.email || auth.currentUser?.email || '',
+  phone: u?.phoneNumber || '',
+  photoURL: u?.photoURL || null,
+  location: {
+    city: u?.profile?.city || '',
+    ward: u?.profile?.wardCode || '',
+    address: u?.profile?.address || '',
+  },
+});
 
 const ProfileScreen = ({ navigation }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [profileData, setProfileData] = useState({
-    displayName: auth.currentUser?.displayName || '',
-    email: auth.currentUser?.email || '',
-    phone: auth.currentUser?.phoneNumber || '',
-    photoURL: auth.currentUser?.photoURL || null,
-    location: {
-      city: 'Bhubaneswar',
-      ward: 'Ward 15',
-      address: '',
-    },
-  });
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [saved, setSaved] = useState(emptyProfile());
+  const [profileData, setProfileData] = useState(emptyProfile());
 
-  useEffect(() => {
-    // Load user location if available
-    getCurrentLocation();
+  const loadProfile = useCallback(async () => {
+    try {
+      const res = await userAPI.getProfile();
+      const p = fromServer(res.user);
+      setSaved(p);
+      setProfileData(p);
+    } catch (e) {
+      Alert.alert('Could not load profile', errorMessage(e));
+    } finally {
+      setInitialLoading(false);
+    }
   }, []);
+
+  useEffect(() => { loadProfile(); }, [loadProfile]);
 
   const getCurrentLocation = async () => {
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status === 'granted') {
-        const location = await Location.getCurrentPositionAsync({});
-        const [address] = await Location.reverseGeocodeAsync({
-          latitude: location.coords.latitude,
-          longitude: location.coords.longitude,
-        });
-        
-        if (address) {
-          setProfileData(prev => ({
-            ...prev,
-            location: {
-              ...prev.location,
-              city: address.city || prev.location.city,
-              address: `${address.name || ''} ${address.street || ''} ${address.district || ''}`.trim(),
-            },
-          }));
-        }
+      if (status !== 'granted') {
+        Alert.alert('Permission needed', 'Please allow location access to fill in your address.');
+        return;
       }
-    } catch (error) {
-      console.log('Location error:', error);
+      const location = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+      const [address] = await Location.reverseGeocodeAsync({
+        latitude: location.coords.latitude,
+        longitude: location.coords.longitude,
+      });
+      if (address) {
+        setProfileData((prev) => ({
+          ...prev,
+          location: {
+            ...prev.location,
+            city: address.city || prev.location.city,
+            address: [address.name, address.street, address.district].filter(Boolean).join(', '),
+          },
+        }));
+      }
+    } catch {
+      Alert.alert('Location error', 'Could not get your location. Make sure GPS is on.');
     }
   };
 
   const handleImagePicker = async () => {
     try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission needed', 'Please allow photo access in your phone settings.');
+        return;
+      }
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: ['images'],
         allowsEditing: true,
         aspect: [1, 1],
         quality: 0.8,
       });
-
-      if (!result.canceled) {
-        setProfileData(prev => ({
-          ...prev,
-          photoURL: result.assets[0].uri,
-        }));
+      if (!result.canceled && result.assets?.length) {
+        const photo = await toCompressedDataUri(result.assets[0].uri, { maxWidth: 256, quality: 0.7 });
+        setProfileData((prev) => ({ ...prev, photoURL: photo }));
       }
-    } catch (error) {
+    } catch {
       Alert.alert('Error', 'Failed to pick image');
     }
   };
 
   const handleSave = async () => {
-    if (!profileData.displayName.trim()) {
-      Alert.alert('Error', 'Name is required');
+    const name = profileData.displayName.trim();
+    if (name.length < 2) {
+      Alert.alert('Name required', 'Please enter your full name.');
+      return;
+    }
+    const phone = profileData.phone.trim();
+    if (phone && !/^\+?[0-9\s-]{7,15}$/.test(phone)) {
+      Alert.alert('Invalid phone number', 'Please enter a valid phone number.');
       return;
     }
 
     setLoading(true);
     try {
-      // Update Firebase Auth profile
-      await updateProfile(auth.currentUser, {
-        displayName: profileData.displayName,
+      const res = await userAPI.updateProfile({
+        displayName: name,
+        phoneNumber: phone,
         photoURL: profileData.photoURL,
+        profile: {
+          city: profileData.location.city.trim(),
+          wardCode: profileData.location.ward.trim(),
+          address: profileData.location.address.trim(),
+        },
       });
-
-      // Here you would also update the backend user profile
-      // await updateUserProfile(profileData);
-
+      // Keep the Firebase display name in sync (photos live on our server, not in Firebase)
+      await updateProfile(auth.currentUser, { displayName: name }).catch(() => {});
+      const p = fromServer(res.user);
+      setSaved(p);
+      setProfileData(p);
       setIsEditing(false);
-      Alert.alert('Success', 'Profile updated successfully');
+      Alert.alert('Saved', 'Your profile has been updated.');
     } catch (error) {
-      Alert.alert('Error', 'Failed to update profile');
+      Alert.alert('Could not save', errorMessage(error, 'Failed to update profile.'));
     } finally {
       setLoading(false);
     }
   };
 
   const handleCancel = () => {
-    // Reset to original values
-    setProfileData({
-      displayName: auth.currentUser?.displayName || '',
-      email: auth.currentUser?.email || '',
-      phone: auth.currentUser?.phoneNumber || '',
-      photoURL: auth.currentUser?.photoURL || null,
-      location: profileData.location,
-    });
+    setProfileData(saved);
     setIsEditing(false);
   };
+
+  if (initialLoading) {
+    return (
+      <View style={[styles.container, { alignItems: 'center', justifyContent: 'center' }]}>
+        <ActivityIndicator size="large" color="#FF4500" />
+      </View>
+    );
+  }
 
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
+        <TouchableOpacity onPress={() => (isEditing ? handleCancel() : navigation.goBack())}>
           <Ionicons name="arrow-back" size={24} color="#FF4500" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>My Profile</Text>
@@ -163,6 +204,7 @@ const ProfileScreen = ({ navigation }) => {
         <View style={styles.inputGroup}>
           <Text style={styles.label}>Full Name</Text>
           <TextInput
+            placeholderTextColor="#9A9A9A"
             style={[styles.input, isEditing && styles.inputEditable]}
             value={profileData.displayName}
             onChangeText={(text) => setProfileData(prev => ({ ...prev, displayName: text }))}
@@ -175,6 +217,7 @@ const ProfileScreen = ({ navigation }) => {
         <View style={styles.inputGroup}>
           <Text style={styles.label}>Email</Text>
           <TextInput
+            placeholderTextColor="#9A9A9A"
             style={styles.input}
             value={profileData.email}
             placeholder="No email provided"
@@ -187,6 +230,7 @@ const ProfileScreen = ({ navigation }) => {
         <View style={styles.inputGroup}>
           <Text style={styles.label}>Phone Number</Text>
           <TextInput
+            placeholderTextColor="#9A9A9A"
             style={[styles.input, isEditing && styles.inputEditable]}
             value={profileData.phone}
             onChangeText={(text) => setProfileData(prev => ({ ...prev, phone: text }))}
@@ -203,6 +247,7 @@ const ProfileScreen = ({ navigation }) => {
           <View style={styles.inputGroup}>
             <Text style={styles.label}>City</Text>
             <TextInput
+            placeholderTextColor="#9A9A9A"
               style={[styles.input, isEditing && styles.inputEditable]}
               value={profileData.location.city}
               onChangeText={(text) => setProfileData(prev => ({
@@ -217,13 +262,14 @@ const ProfileScreen = ({ navigation }) => {
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Ward</Text>
             <TextInput
+            placeholderTextColor="#9A9A9A"
               style={[styles.input, isEditing && styles.inputEditable]}
               value={profileData.location.ward}
               onChangeText={(text) => setProfileData(prev => ({
                 ...prev,
                 location: { ...prev.location, ward: text }
               }))}
-              placeholder="Enter your ward"
+              placeholder="e.g. Ward 12"
               editable={isEditing}
             />
           </View>
@@ -231,6 +277,7 @@ const ProfileScreen = ({ navigation }) => {
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Address</Text>
             <TextInput
+            placeholderTextColor="#9A9A9A"
               style={[styles.input, isEditing && styles.inputEditable]}
               value={profileData.location.address}
               onChangeText={(text) => setProfileData(prev => ({

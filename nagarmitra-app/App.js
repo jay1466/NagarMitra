@@ -2,9 +2,10 @@ import React from 'react';
 import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { Text, View, Button, ScrollView, Image, TouchableOpacity, StyleSheet, Dimensions } from 'react-native';
-import { useState, useCallback } from 'react';
-import { BASE_URL } from './src/config';
+import { Text, View, ScrollView, Image, TouchableOpacity, StyleSheet, Dimensions, ActivityIndicator, RefreshControl } from 'react-native';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
+import { StatusBar } from 'expo-status-bar';
+import { useFocusEffect } from '@react-navigation/native';
 import RaiseScreen from './src/screens/RaiseScreen';
 import DashboardScreen from './src/screens/DashboardScreen';
 import CommunityScreen from './src/screens/CommunityScreen';
@@ -21,49 +22,82 @@ import OnboardingScreen from './src/screens/OnboardingScreen';
 import AuthScreen from './src/screens/AuthScreen';
 import { auth, onAuthStateChanged, signOut } from './src/lib/firebase';
 import BotpressWidget from './src/components/BotpressWidget';
+import ErrorBoundary, { withErrorBoundary } from './src/components/ErrorBoundary';
+import { complaintAPI } from './src/api/client';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
 
+const formatAgo = (date) => {
+  const mins = Math.max(0, Math.floor((Date.now() - new Date(date).getTime()) / 60000));
+  if (mins < 60) return `${mins || 1} min ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs} hr${hrs > 1 ? 's' : ''} ago`;
+  const days = Math.floor(hrs / 24);
+  return `${days} day${days > 1 ? 's' : ''} ago`;
+};
+
 const HomeScreen = ({ navigation }) => {
   const [currentSlide, setCurrentSlide] = React.useState(0);
-  const [stats, setStats] = React.useState({
-    responseTime: '12 hrs',
-    resolutionRate: '90%',
-    totalReports: '1,247',
-    resolved: '1,120'
-  });
-  
+  const [stats, setStats] = React.useState(null);
+  const [updates, setUpdates] = React.useState([]);
+  const [loadingStats, setLoadingStats] = React.useState(true);
+  const [statsError, setStatsError] = React.useState(false);
+  const slideRef = React.useRef(null);
+  const firstName = (auth.currentUser?.displayName || '').split(' ')[0];
+
   const slides = [
-    {
-      id: 1,
-      title: 'Building a Smarter City',
-      image: 'https://via.placeholder.com/350x200/FF4500/FFFFFF?text=Smart+City',
-      description: 'Join thousands of citizens making their cities better'
-    },
-    {
-      id: 2,
-      title: 'Your Voice, Your Community',
-      image: 'https://via.placeholder.com/350x200/28A745/FFFFFF?text=Community',
-      description: 'Every report makes a difference in your neighborhood'
-    },
-    {
-      id: 3,
-      title: 'Resolve Issues Together',
-      image: 'https://via.placeholder.com/350x200/007BFF/FFFFFF?text=Resolution',
-      description: 'See real results from your civic participation'
-    }
+    { id: 1, title: 'Building a Smarter City', icon: 'business', color: '#FF4500', description: 'Join citizens making their cities better' },
+    { id: 2, title: 'Your Voice, Your Community', icon: 'people', color: '#28A745', description: 'Every report makes a difference in your neighborhood' },
+    { id: 3, title: 'Resolve Issues Together', icon: 'checkmark-done', color: '#007BFF', description: 'See real results from your civic participation' },
   ];
 
   React.useEffect(() => {
     const interval = setInterval(() => {
-      setCurrentSlide((prev) => (prev + 1) % slides.length);
+      setCurrentSlide((prev) => {
+        const next = (prev + 1) % slides.length;
+        slideRef.current?.scrollTo({ x: next * width, animated: true });
+        return next;
+      });
     }, 5000);
     return () => clearInterval(interval);
   }, []);
 
+  const loadStats = React.useCallback(async () => {
+    setLoadingStats(true);
+    setStatsError(false);
+    try {
+      const [all, resolved, inProgress, recent] = await Promise.all([
+        complaintAPI.getList({ limit: 1 }),
+        complaintAPI.getList({ status: 'resolved', limit: 1 }),
+        complaintAPI.getList({ status: 'in_progress', limit: 1 }),
+        complaintAPI.getList({ limit: 5 }),
+      ]);
+      const total = all.total || 0;
+      setStats({
+        totalReports: total,
+        resolved: resolved.total || 0,
+        inProgress: inProgress.total || 0,
+        resolutionRate: total ? `${Math.round(((resolved.total || 0) / total) * 100)}%` : '0%',
+      });
+      setUpdates(recent.items || []);
+    } catch {
+      setStatsError(true);
+    } finally {
+      setLoadingStats(false);
+    }
+  }, []);
+
+  useFocusEffect(React.useCallback(() => { loadStats(); }, [loadStats]));
+
+  const statValue = (v) => (loadingStats && !stats ? '…' : stats ? String(v) : '–');
+
   return (
-    <ScrollView style={homeStyles.container} showsVerticalScrollIndicator={false}>
+    <ScrollView
+      style={homeStyles.container}
+      showsVerticalScrollIndicator={false}
+      refreshControl={<RefreshControl refreshing={loadingStats && !!stats} onRefresh={loadStats} colors={['#FF4500']} />}
+    >
       {/* Header */}
       <View style={homeStyles.header}>
         <View style={homeStyles.logoSection}>
@@ -82,15 +116,15 @@ const HomeScreen = ({ navigation }) => {
         </TouchableOpacity>
       </View>
 
-      {/* Location Display */}
       <View style={homeStyles.locationSection}>
-        <Ionicons name="location" size={16} color="#666" />
-        <Text style={homeStyles.locationText}>Bhubaneswar, Ward 15</Text>
+        <Ionicons name="hand-right-outline" size={16} color="#666" />
+        <Text style={homeStyles.locationText}>{firstName ? `Hello, ${firstName}!` : 'Welcome to NagarMitra!'}</Text>
       </View>
 
       {/* Slideshow */}
       <View style={homeStyles.slideshowContainer}>
         <ScrollView
+          ref={slideRef}
           horizontal
           pagingEnabled
           showsHorizontalScrollIndicator={false}
@@ -101,12 +135,16 @@ const HomeScreen = ({ navigation }) => {
           }}
         >
           {slides.map((slide) => (
-            <View key={slide.id} style={homeStyles.slide}>
-              <Image source={{ uri: slide.image }} style={homeStyles.slideImage} />
+            <View key={slide.id} style={homeStyles.slidePage}>
+             <View style={homeStyles.slide}>
+              <View style={[homeStyles.slideImage, { backgroundColor: slide.color }]}>
+                <Ionicons name={slide.icon} size={72} color="rgba(255,255,255,0.9)" />
+              </View>
               <View style={homeStyles.slideOverlay}>
                 <Text style={homeStyles.slideTitle}>{slide.title}</Text>
                 <Text style={homeStyles.slideDescription}>{slide.description}</Text>
               </View>
+             </View>
             </View>
           ))}
         </ScrollView>
@@ -137,23 +175,29 @@ const HomeScreen = ({ navigation }) => {
 
       {/* Statistics Cards */}
       <View style={homeStyles.statsContainer}>
+        {statsError && (
+          <TouchableOpacity style={homeStyles.errorBanner} onPress={loadStats}>
+            <Ionicons name="cloud-offline-outline" size={18} color="#DC3545" />
+            <Text style={homeStyles.errorBannerText}>Couldn't load live numbers. Tap to retry.</Text>
+          </TouchableOpacity>
+        )}
         <View style={homeStyles.statsRow}>
           <View style={homeStyles.statCard}>
-            <Text style={homeStyles.statValue}>{stats.responseTime}</Text>
-            <Text style={homeStyles.statLabel}>Avg. Response Time</Text>
+            <Text style={homeStyles.statValue}>{statValue(stats?.inProgress)}</Text>
+            <Text style={homeStyles.statLabel}>In Progress</Text>
           </View>
           <View style={homeStyles.statCard}>
-            <Text style={homeStyles.statValue}>{stats.resolutionRate}</Text>
+            <Text style={homeStyles.statValue}>{statValue(stats?.resolutionRate)}</Text>
             <Text style={homeStyles.statLabel}>Resolution Rate</Text>
           </View>
         </View>
         <View style={homeStyles.statsRow}>
           <View style={homeStyles.statCard}>
-            <Text style={homeStyles.statValue}>{stats.totalReports}</Text>
+            <Text style={homeStyles.statValue}>{statValue(stats?.totalReports)}</Text>
             <Text style={homeStyles.statLabel}>Total Reports</Text>
           </View>
           <View style={homeStyles.statCard}>
-            <Text style={homeStyles.statValue}>{stats.resolved}</Text>
+            <Text style={homeStyles.statValue}>{statValue(stats?.resolved)}</Text>
             <Text style={homeStyles.statLabel}>Issues Resolved</Text>
           </View>
         </View>
@@ -162,23 +206,25 @@ const HomeScreen = ({ navigation }) => {
       {/* Recent Updates */}
       <View style={homeStyles.recentUpdatesContainer}>
         <Text style={homeStyles.sectionTitle}>Recent Updates</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          <View style={homeStyles.updateCard}>
-            <Ionicons name="checkmark-circle" size={20} color="#28A745" />
-            <Text style={homeStyles.updateText}>Pothole on MG Road fixed</Text>
-            <Text style={homeStyles.updateTime}>2 hrs ago</Text>
-          </View>
-          <View style={homeStyles.updateCard}>
-            <Ionicons name="construct" size={20} color="#FFC107" />
-            <Text style={homeStyles.updateText}>Street light repair in progress</Text>
-            <Text style={homeStyles.updateTime}>5 hrs ago</Text>
-          </View>
-          <View style={homeStyles.updateCard}>
-            <Ionicons name="checkmark-circle" size={20} color="#28A745" />
-            <Text style={homeStyles.updateText}>Garbage cleared from Park Street</Text>
-            <Text style={homeStyles.updateTime}>1 day ago</Text>
-          </View>
-        </ScrollView>
+        {loadingStats && !updates.length ? (
+          <ActivityIndicator color="#FF4500" />
+        ) : updates.length === 0 ? (
+          <Text style={homeStyles.emptyText}>No reports yet. Be the first to raise one!</Text>
+        ) : (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            {updates.map((u) => (
+              <View key={u._id} style={[homeStyles.updateCard, u.status === 'resolved' ? null : { borderLeftColor: '#FFC107' }]}>
+                <Ionicons
+                  name={u.status === 'resolved' ? 'checkmark-circle' : 'construct'}
+                  size={20}
+                  color={u.status === 'resolved' ? '#28A745' : '#FFC107'}
+                />
+                <Text style={homeStyles.updateText} numberOfLines={2}>{u.title || u.category}</Text>
+                <Text style={homeStyles.updateTime}>{formatAgo(u.createdAt)} · {String(u.status || '').replace('_', ' ')}</Text>
+              </View>
+            ))}
+          </ScrollView>
+        )}
       </View>
 
       {/* Footer */}
@@ -197,24 +243,38 @@ const HomeScreen = ({ navigation }) => {
   );
 };
 
+const Safe = {
+  HomeScreen: withErrorBoundary(HomeScreen),
+  DashboardScreen: withErrorBoundary(DashboardScreen),
+  RaiseScreen: withErrorBoundary(RaiseScreen),
+  CommunityScreen: withErrorBoundary(CommunityScreen),
+  OthersScreen: withErrorBoundary(OthersScreen),
+  ProfileScreen: withErrorBoundary(ProfileScreen),
+  NotificationsScreen: withErrorBoundary(NotificationsScreen),
+  AboutUsScreen: withErrorBoundary(AboutUsScreen),
+  FAQScreen: withErrorBoundary(FAQScreen),
+  SettingsScreen: withErrorBoundary(SettingsScreen),
+  FeedbackScreen: withErrorBoundary(FeedbackScreen),
+};
+
 // Stack Navigator for Others section
 const OthersStack = () => (
   <Stack.Navigator screenOptions={{ headerShown: false }} initialRouteName="OthersMain">
-    <Stack.Screen name="OthersMain" component={OthersScreen} />
-    <Stack.Screen name="Profile" component={ProfileScreen} />
-    <Stack.Screen name="Notifications" component={NotificationsScreen} />
-    <Stack.Screen name="AboutUs" component={AboutUsScreen} />
-    <Stack.Screen name="FAQ" component={FAQScreen} />
-    <Stack.Screen name="Settings" component={SettingsScreen} />
-    <Stack.Screen name="Feedback" component={FeedbackScreen} />
+    <Stack.Screen name="OthersMain" component={Safe.OthersScreen} />
+    <Stack.Screen name="Profile" component={Safe.ProfileScreen} />
+    <Stack.Screen name="Notifications" component={Safe.NotificationsScreen} />
+    <Stack.Screen name="AboutUs" component={Safe.AboutUsScreen} />
+    <Stack.Screen name="FAQ" component={Safe.FAQScreen} />
+    <Stack.Screen name="Settings" component={Safe.SettingsScreen} />
+    <Stack.Screen name="Feedback" component={Safe.FeedbackScreen} />
   </Stack.Navigator>
 );
 
 // Stack Navigator for Home section (to include profile navigation)
 const HomeStack = () => (
   <Stack.Navigator screenOptions={{ headerShown: false }} initialRouteName="HomeMain">
-    <Stack.Screen name="HomeMain" component={HomeScreen} />
-    <Stack.Screen name="Profile" component={ProfileScreen} />
+    <Stack.Screen name="HomeMain" component={Safe.HomeScreen} />
+    <Stack.Screen name="Profile" component={Safe.ProfileScreen} />
   </Stack.Navigator>
 );
 
@@ -235,21 +295,32 @@ export default function App() {
   }, []);
 
   const completeOnboarding = async () => {
-    await AsyncStorage.setItem('onboarding_seen_v1', '1');
+    try {
+      await AsyncStorage.setItem('onboarding_seen_v1', '1');
+    } catch {
+      // Not fatal: onboarding may just show again next launch
+    }
     setShowOnboarding(false);
   };
 
   // Observe Firebase auth state
   React.useEffect(() => {
+    let firstEvent = true;
     const unsub = onAuthStateChanged(auth, async (u) => {
-      // Respect remember_me: if user is signed in but remember_me was set to 0, sign out once.
-      const remember = await AsyncStorage.getItem('remember_me');
-      if (u && remember === '0') {
-        try { await signOut(auth); } catch {}
-        setUser(null);
-      } else {
-        setUser(u);
+      try {
+        if (u && firstEvent) {
+          // Restored session at app start: honour "Stay logged in = off"
+          const remember = await AsyncStorage.getItem('remember_me');
+          if (remember === '0') {
+            await signOut(auth).catch(() => {});
+            u = null;
+          }
+        }
+      } catch {
+        // Storage unavailable: keep the session as Firebase reports it
       }
+      firstEvent = false;
+      setUser(u);
       setAuthReady(true);
     });
     return () => unsub();
@@ -268,46 +339,52 @@ export default function App() {
 
   if (showOnboarding === null || !authReady) {
     return (
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-        <Text>Loading…</Text>
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFF' }}>
+        <Image source={require('./assets/logo.png')} style={{ width: 72, height: 72, marginBottom: 16 }} resizeMode="contain" />
+        <ActivityIndicator size="large" color="#FF4500" />
       </View>
     );
   }
 
   return (
-    <View style={{ flex: 1 }}>
-      <NavigationContainer theme={theme}>
-      {showOnboarding ? (
-        <OnboardingScreen onDone={completeOnboarding} />
-      ) : !user ? (
-        <AuthScreen />
-      ) : (
-        <Tab.Navigator
-        screenOptions={({ route }) => ({
-          headerShown: false,
-          tabBarIcon: ({ color, size, focused }) => {
-            let icon = 'ellipse';
-            if (route.name === 'Home') icon = focused ? 'home' : 'home-outline';
-            else if (route.name === 'Dashboard') icon = focused ? 'stats-chart' : 'stats-chart-outline';
-            else if (route.name === 'Raise') icon = focused ? 'add-circle' : 'add-circle-outline';
-            else if (route.name === 'Community') icon = focused ? 'people' : 'people-outline';
-            else if (route.name === 'Others') icon = focused ? 'menu' : 'menu-outline';
-            return <Ionicons name={icon} size={size} color={color} />;
-          },
-          tabBarActiveTintColor: '#FF4500',
-          tabBarInactiveTintColor: '#666',
-        })}
-        >
-        <Tab.Screen name="Home" component={HomeStack} />
-        <Tab.Screen name="Dashboard" component={DashboardScreen} />
-        <Tab.Screen name="Raise" component={RaiseScreen} />
-        <Tab.Screen name="Community" component={CommunityScreen} />
-        <Tab.Screen name="Others" component={OthersStack} />
-        </Tab.Navigator>
-      )}
-    </NavigationContainer>
-    <BotpressWidget />
-  </View>
+    <SafeAreaProvider>
+      <StatusBar style="dark" />
+      <SafeAreaView style={{ flex: 1, backgroundColor: '#FFF' }} edges={['top', 'left', 'right']}>
+        <ErrorBoundary>
+          <NavigationContainer theme={theme}>
+            {showOnboarding ? (
+              <OnboardingScreen onDone={completeOnboarding} />
+            ) : !user ? (
+              <AuthScreen />
+            ) : (
+              <Tab.Navigator
+                screenOptions={({ route }) => ({
+                  headerShown: false,
+                  tabBarIcon: ({ color, size, focused }) => {
+                    let icon = 'ellipse';
+                    if (route.name === 'Home') icon = focused ? 'home' : 'home-outline';
+                    else if (route.name === 'Dashboard') icon = focused ? 'stats-chart' : 'stats-chart-outline';
+                    else if (route.name === 'Raise') icon = focused ? 'add-circle' : 'add-circle-outline';
+                    else if (route.name === 'Community') icon = focused ? 'people' : 'people-outline';
+                    else if (route.name === 'Others') icon = focused ? 'menu' : 'menu-outline';
+                    return <Ionicons name={icon} size={size} color={color} />;
+                  },
+                  tabBarActiveTintColor: '#FF4500',
+                  tabBarInactiveTintColor: '#666',
+                })}
+              >
+                <Tab.Screen name="Home" component={HomeStack} />
+                <Tab.Screen name="Dashboard" component={Safe.DashboardScreen} />
+                <Tab.Screen name="Raise" component={Safe.RaiseScreen} />
+                <Tab.Screen name="Community" component={Safe.CommunityScreen} />
+                <Tab.Screen name="Others" component={OthersStack} />
+              </Tab.Navigator>
+            )}
+          </NavigationContainer>
+          {user && <BotpressWidget />}
+        </ErrorBoundary>
+      </SafeAreaView>
+    </SafeAreaProvider>
   );
 }
 
@@ -361,9 +438,11 @@ const homeStyles = StyleSheet.create({
     marginBottom: 20,
     position: 'relative',
   },
+  slidePage: {
+    width,
+    paddingHorizontal: 20,
+  },
   slide: {
-    width: width - 40,
-    marginHorizontal: 20,
     borderRadius: 12,
     overflow: 'hidden',
     position: 'relative',
@@ -371,7 +450,9 @@ const homeStyles = StyleSheet.create({
   slideImage: {
     width: '100%',
     height: 180,
-    resizeMode: 'cover',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingBottom: 50,
   },
   slideOverlay: {
     position: 'absolute',
@@ -463,6 +544,24 @@ const homeStyles = StyleSheet.create({
     color: '#666',
     textAlign: 'center',
   },
+  errorBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#FFEBEE',
+    padding: 10,
+    borderRadius: 8,
+    marginBottom: 10,
+  },
+  errorBannerText: {
+    color: '#DC3545',
+    fontSize: 13,
+    flex: 1,
+  },
+  emptyText: {
+    color: '#888',
+    fontSize: 14,
+  },
   recentUpdatesContainer: {
     paddingHorizontal: 20,
     marginBottom: 20,
@@ -478,7 +577,7 @@ const homeStyles = StyleSheet.create({
     padding: 12,
     borderRadius: 8,
     marginRight: 12,
-    minWidth: 200,
+    width: 200,
     borderLeftWidth: 3,
     borderLeftColor: '#28A745',
   },

@@ -7,6 +7,7 @@ import {
   ScrollView,
   Linking,
 } from 'react-native';
+import { APP_VERSION, RELEASE_DATE, COPYRIGHT_YEAR } from '../appInfo';
 import { Ionicons } from '@expo/vector-icons';
 
 const AboutUsScreen = ({ navigation }) => {
@@ -139,8 +140,8 @@ const AboutUsScreen = ({ navigation }) => {
           </View>
           <View style={styles.techCategory}>
             <Text style={styles.techCategoryTitle}>Services</Text>
-            <Text style={styles.techItem}>• Google Maps API</Text>
-            <Text style={styles.techItem}>• AWS S3</Text>
+            <Text style={styles.techItem}>• OpenStreetMap</Text>
+            <Text style={styles.techItem}>• MongoDB Atlas storage</Text>
             <Text style={styles.techItem}>• Push Notifications</Text>
           </View>
         </View>
@@ -152,11 +153,11 @@ const AboutUsScreen = ({ navigation }) => {
         <View style={styles.infoGrid}>
           <View style={styles.infoItem}>
             <Text style={styles.infoLabel}>Version</Text>
-            <Text style={styles.infoValue}>1.0.0</Text>
+            <Text style={styles.infoValue}>{APP_VERSION}</Text>
           </View>
           <View style={styles.infoItem}>
             <Text style={styles.infoLabel}>Released</Text>
-            <Text style={styles.infoValue}>September 2024</Text>
+            <Text style={styles.infoValue}>{RELEASE_DATE}</Text>
           </View>
           <View style={styles.infoItem}>
             <Text style={styles.infoLabel}>Platform</Text>
@@ -218,7 +219,7 @@ const AboutUsScreen = ({ navigation }) => {
           Made with ❤️ for a better tomorrow
         </Text>
         <Text style={styles.copyrightText}>
-          © 2024 NagarMitra. All rights reserved.
+          © {COPYRIGHT_YEAR} NagarMitra. All rights reserved.
         </Text>
       </View>
     </ScrollView>

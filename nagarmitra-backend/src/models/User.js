@@ -43,7 +43,7 @@ const UserSchema = new mongoose.Schema(
     
     // Location for location-based features
     location: {
-      type: { type: String, enum: ['Point'], default: 'Point' },
+      type: { type: String, enum: ['Point'] },
       coordinates: { type: [Number], index: '2dsphere' }, // [lng, lat]
     },
   },

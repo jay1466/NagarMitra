@@ -1,356 +1,201 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, TextInput, Alert, ScrollView, Image, TouchableOpacity, StyleSheet, FlatList, Modal, ActivityIndicator } from 'react-native';
-import { auth } from '../lib/firebase';
+import React, { useState } from 'react';
+import { View, Text, TextInput, Alert, ScrollView, Image, TouchableOpacity, StyleSheet, FlatList, Modal, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
-import { Audio } from 'expo-av';
-import * as Speech from 'expo-speech';
 import { Ionicons } from '@expo/vector-icons';
-import { Picker } from '@react-native-picker/picker';
-import { apiPost, detectAPI } from '../api/client';
+import { complaintAPI, detectAPI, errorMessage } from '../api/client';
 import { CATEGORIES, PRIORITIES } from '../constants';
-import { getPresignedUrl, uploadToPresignedUrl } from '../api/media';
+import { toCompressedDataUri } from '../utils/image';
+
+const MAX_IMAGES = 3;
+const MIN_DESCRIPTION = 10;
 
 export default function RaiseScreen({ navigation }) {
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState(CATEGORIES[0]);
-  const [priority, setPriority] = useState(PRIORITIES[0]);
+  const [priority, setPriority] = useState('Medium');
   const [address, setAddress] = useState('');
   const [coords, setCoords] = useState(null);
   const [images, setImages] = useState([]);
-  const [imageKeys, setImageKeys] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [isRecording, setIsRecording] = useState(false);
-  const [recording, setRecording] = useState(null);
-  const [voiceUri, setVoiceUri] = useState(null);
-  const [voiceKey, setVoiceKey] = useState(null);
+  const [locating, setLocating] = useState(false);
   const [showCategoryPicker, setShowCategoryPicker] = useState(false);
   const [showPriorityPicker, setShowPriorityPicker] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [detectingCategory, setDetectingCategory] = useState(false);
   const [detectedConfidence, setDetectedConfidence] = useState(null);
   const [reportId, setReportId] = useState('');
-  const user = auth.currentUser;
 
-  // Initialize audio permissions
-  useEffect(() => {
-    const requestAudioPermissions = async () => {
-      const { status } = await Audio.requestPermissionsAsync();
-      if (status !== 'granted') {
-        console.log('Audio permissions not granted');
-      }
-    };
-    requestAudioPermissions();
-  }, []);
-
-  // Email verification functions removed - no longer required
-
-  // Voice recording functions
-  const startRecording = async () => {
-    try {
-      const { granted } = await Audio.requestPermissionsAsync();
-      if (!granted) {
-        Alert.alert('Permission Required', 'Microphone permission is required for voice input.');
-        return;
-      }
-
-      await Audio.setAudioModeAsync({
-        allowsRecordingIOS: true,
-        playsInSilentModeIOS: true,
-      });
-
-      const recordingOptions = {
-        android: {
-          extension: '.m4a',
-          outputFormat: Audio.RECORDING_OPTION_ANDROID_OUTPUT_FORMAT_MPEG_4,
-          audioEncoder: Audio.RECORDING_OPTION_ANDROID_AUDIO_ENCODER_AAC,
-          sampleRate: 44100,
-          numberOfChannels: 2,
-          bitRate: 128000,
-        },
-        ios: {
-          extension: '.m4a',
-          outputFormat: Audio.RECORDING_OPTION_IOS_OUTPUT_FORMAT_MPEG4AAC,
-          audioQuality: Audio.RECORDING_OPTION_IOS_AUDIO_QUALITY_MAX,
-          sampleRate: 44100,
-          numberOfChannels: 2,
-          bitRate: 128000,
-          linearPCMBitDepth: 16,
-          linearPCMIsBigEndian: false,
-          linearPCMIsFloat: false,
-        },
-      };
-
-      const { recording } = await Audio.Recording.createAsync(recordingOptions);
-      setRecording(recording);
-      setIsRecording(true);
-    } catch (error) {
-      Alert.alert('Error', 'Failed to start recording: ' + error.message);
-    }
-  };
-
-  const stopRecording = async () => {
-    if (!recording) return;
-
-    try {
-      await recording.stopAndUnloadAsync();
-      const uri = recording.getURI();
-      setVoiceUri(uri);
-      setRecording(null);
-      setIsRecording(false);
-    } catch (error) {
-      Alert.alert('Error', 'Failed to stop recording: ' + error.message);
-    }
-  };
-
-  const playVoiceNote = async () => {
-    if (!voiceUri) return;
-
-    try {
-      const { sound } = await Audio.Sound.createAsync({ uri: voiceUri });
-      await sound.playAsync();
-    } catch (error) {
-      Alert.alert('Error', 'Failed to play voice note: ' + error.message);
-    }
-  };
-
-  const deleteVoiceNote = () => {
-    setVoiceUri(null);
-    setVoiceKey(null);
-  };
-
+  // AI suggestion is a nice-to-have: failures are silent and never block the form
   const detectImageCategory = async (uri) => {
     try {
       setDetectingCategory(true);
       const result = await detectAPI.detectImage(uri);
-      
-      if (result && result.category && result.category !== 'miscellaneous') {
-        // If the category matches one of the app's categories (case sensitive check or mapping)
-        const matchedCategory = CATEGORIES.find(c => c.toLowerCase() === result.category.toLowerCase());
-        if (matchedCategory) {
-          setCategory(matchedCategory);
-        } else if (CATEGORIES.includes(result.category)) {
-          setCategory(result.category);
+      if (result?.category && result.category !== 'miscellaneous') {
+        const matched = CATEGORIES.find((c) => c.toLowerCase() === String(result.category).toLowerCase());
+        if (matched) {
+          setCategory(matched);
+          setDetectedConfidence(typeof result.confidence === 'number' ? result.confidence : null);
         }
-        setDetectedConfidence(result.confidence);
       }
-    } catch (err) {
-      console.log('Detection error:', err);
+    } catch {
+      // detection unavailable
     } finally {
       setDetectingCategory(false);
     }
   };
 
+  const addImages = (assets) => {
+    const room = MAX_IMAGES - images.length;
+    const added = assets.slice(0, room).map((a) => ({ uri: a.uri }));
+    if (!added.length) return;
+    setImages((prev) => [...prev, ...added].slice(0, MAX_IMAGES));
+    if (images.length === 0) detectImageCategory(added[0].uri);
+  };
+
   const pickImage = async () => {
-    if (images.length >= 5) {
-      Alert.alert('Limit Reached', 'You can upload maximum 5 images per complaint.');
+    if (images.length >= MAX_IMAGES) {
+      Alert.alert('Limit reached', `You can add up to ${MAX_IMAGES} photos per complaint.`);
       return;
     }
-    
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') return Alert.alert('Permission required', 'Media access denied');
-    
-    const res = await ImagePicker.launchImageLibraryAsync({ 
-      allowsEditing: false, 
-      quality: 0.7,
-      allowsMultipleSelection: true,
-      selectionLimit: 5 - images.length
-    });
-    
-    if (!res.canceled) {
-      const newImages = res.assets.map(asset => ({
-        uri: asset.uri,
-        uploaded: false,
-        key: null
-      }));
-      setImages(prev => [...prev, ...newImages]);
-      
-      if (res.assets.length > 0) {
-        detectImageCategory(res.assets[0].uri);
+    try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission needed', 'Please allow photo access in your phone settings to add photos.');
+        return;
       }
+      const res = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        quality: 0.8,
+        allowsMultipleSelection: true,
+        selectionLimit: MAX_IMAGES - images.length,
+      });
+      if (!res.canceled && res.assets?.length) addImages(res.assets);
+    } catch {
+      Alert.alert('Error', 'Could not open your gallery. Please try again.');
     }
   };
 
   const takePhoto = async () => {
-    if (images.length >= 5) {
-      Alert.alert('Limit Reached', 'You can upload maximum 5 images per complaint.');
+    if (images.length >= MAX_IMAGES) {
+      Alert.alert('Limit reached', `You can add up to ${MAX_IMAGES} photos per complaint.`);
       return;
     }
-    
-    const { status } = await ImagePicker.requestCameraPermissionsAsync();
-    if (status !== 'granted') return Alert.alert('Permission required', 'Camera access denied');
-    
-    const res = await ImagePicker.launchCameraAsync({ 
-      allowsEditing: false, 
-      quality: 0.7
-    });
-    
-    if (!res.canceled) {
-      const newImage = {
-        uri: res.assets[0].uri,
-        uploaded: false,
-        key: null
-      };
-      setImages(prev => [...prev, newImage]);
-      detectImageCategory(res.assets[0].uri);
+    try {
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission needed', 'Please allow camera access in your phone settings to take photos.');
+        return;
+      }
+      const res = await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], quality: 0.8 });
+      if (!res.canceled && res.assets?.length) addImages(res.assets);
+    } catch {
+      Alert.alert('Error', 'Could not open the camera. Please try again.');
     }
   };
 
   const removeImage = (index) => {
-    setImages(prev => prev.filter((_, i) => i !== index));
+    setImages((prev) => prev.filter((_, i) => i !== index));
+    if (images.length === 1) setDetectedConfidence(null);
   };
 
   const getLocation = async () => {
-    const { status } = await Location.requestForegroundPermissionsAsync();
-    if (status !== 'granted') return Alert.alert('Permission required', 'Location access denied');
-    const loc = await Location.getCurrentPositionAsync({});
-    setCoords({ lat: loc.coords.latitude, lng: loc.coords.longitude });
+    setLocating(true);
     try {
-      const geos = await Location.reverseGeocodeAsync({ latitude: loc.coords.latitude, longitude: loc.coords.longitude });
-      if (geos && geos[0]) {
-        const g = geos[0];
-        setAddress(`${g.name || ''} ${g.street || ''} ${g.city || ''} ${g.region || ''} ${g.postalCode || ''}`.trim());
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission needed', 'Please allow location access, or type the address manually.');
+        return;
       }
-    } catch {}
-  };
-
-  const uploadImages = async () => {
-    if (images.length === 0) {
-      Alert.alert('No Images', 'Please add some images first.');
-      return;
-    }
-    
-    const unuploadedImages = images.filter(img => !img.uploaded);
-    if (unuploadedImages.length === 0) {
-      Alert.alert('Already Uploaded ✅', 'All images are already uploaded and ready for submission!');
-      return;
-    }
-    
-    try {
-      setLoading(true);
-      const uploadPromises = unuploadedImages.map(async (image, index) => {
-        const actualIndex = images.findIndex(img => img.uri === image.uri);
-        const contentType = guessContentType(image.uri);
-        const { key, uploadUrl } = await getPresignedUrl({ contentType, prefix: 'complaints/' });
-        await uploadToPresignedUrl({ uploadUrl, fileUri: image.uri, contentType });
-        
-        setImages(prev => prev.map((img, i) => 
-          i === actualIndex ? { ...img, uploaded: true, key } : img
-        ));
-        
-        return key;
-      });
-      
-      await Promise.all(uploadPromises);
-      Alert.alert(
-        'Upload Successful! ✅', 
-        `${unuploadedImages.length} image${unuploadedImages.length > 1 ? 's' : ''} uploaded successfully. You can now submit your complaint.`,
-        [{ text: 'OK', style: 'default' }]
-      );
-    } catch (e) {
-      Alert.alert('Upload Failed ❌', `Failed to upload images: ${e.message}`);
+      const servicesOn = await Location.hasServicesEnabledAsync();
+      if (!servicesOn) {
+        Alert.alert('Location is off', 'Please turn on GPS/Location on your phone and try again.');
+        return;
+      }
+      const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
+      setCoords({ lat: loc.coords.latitude, lng: loc.coords.longitude });
+      try {
+        const [g] = await Location.reverseGeocodeAsync({ latitude: loc.coords.latitude, longitude: loc.coords.longitude });
+        if (g) {
+          const parts = [g.name, g.street, g.district, g.city, g.region, g.postalCode].filter(Boolean);
+          setAddress([...new Set(parts)].join(', '));
+        }
+      } catch {
+        // Coordinates are enough; the address field stays editable
+      }
+    } catch {
+      Alert.alert('Location error', 'Could not get your location. Please type the address manually.');
     } finally {
-      setLoading(false);
+      setLocating(false);
     }
   };
 
-  const uploadVoiceNote = async () => {
-    if (!voiceUri) {
-      Alert.alert('No Voice Note', 'Please record a voice note first.');
-      return;
-    }
-    
-    try {
-      setLoading(true);
-      const contentType = 'audio/m4a';
-      const { key, uploadUrl } = await getPresignedUrl({ contentType, prefix: 'voice/' });
-      await uploadToPresignedUrl({ uploadUrl, fileUri: voiceUri, contentType });
-      setVoiceKey(key);
-      Alert.alert('Voice Upload Successful! 🎤✅', 'Your voice note has been uploaded and is ready for submission.');
-    } catch (e) {
-      Alert.alert('Voice Upload Failed ❌', `Failed to upload voice note: ${e.message}`);
-    } finally {
-      setLoading(false);
-    }
+  const resetForm = () => {
+    setDescription('');
+    setAddress('');
+    setCoords(null);
+    setImages([]);
+    setCategory(CATEGORIES[0]);
+    setPriority('Medium');
+    setDetectedConfidence(null);
   };
 
   const submit = async () => {
-    if (!description) return Alert.alert('Validation', 'Description is required');
-    if (!category) return Alert.alert('Validation', 'Please select a category');
-    
-    // Check if there are unuploaded images
-    const unuploadedImages = images.filter(img => !img.uploaded);
-    if (unuploadedImages.length > 0) {
-      return Alert.alert('Upload Required', 'Please upload all images before submitting.');
+    if (loading) return;
+    if (description.trim().length < MIN_DESCRIPTION) {
+      Alert.alert('Add more detail', `Please describe the issue in at least ${MIN_DESCRIPTION} characters.`);
+      return;
     }
-    
-    // Check if there's an unuploaded voice note
-    if (voiceUri && !voiceKey) {
-      return Alert.alert('Upload Required', 'Please upload the voice note before submitting.');
+    if (!address.trim() && !coords) {
+      Alert.alert('Location needed', 'Please tap the location button or type the address of the issue.');
+      return;
     }
-    
+
     setLoading(true);
     try {
-      const imageKeys = images.map(img => img.key).filter(Boolean);
-      const mediaKeys = [...imageKeys];
-      if (voiceKey) mediaKeys.push(voiceKey);
-      
-      const body = {
-        title: `${category} Issue - ${priority} Priority`, // Auto-generate title from category and priority
-        description,
+      // Photos are compressed and sent with the report itself
+      const media = [];
+      for (const img of images) {
+        try {
+          media.push(await toCompressedDataUri(img.uri));
+        } catch {
+          // Skip a photo that can't be read rather than failing the whole report
+        }
+      }
+
+      const json = await complaintAPI.create({
+        title: `${category} issue`,
+        description: description.trim(),
         category,
         priority,
-        address,
+        address: address.trim(),
         wardCode: 'W-01',
         location: coords,
-        media: mediaKeys,
-      };
-      
-      const json = await apiPost('/api/v1/complaints', body);
-      setReportId(json.reportId);
+        media,
+      });
+      setReportId(json.reportId || '');
       setShowSuccessModal(true);
-      
-      // Clear form
-      setDescription('');
-      setAddress('');
-      setCoords(null);
-      setImages([]);
-      setVoiceUri(null);
-      setVoiceKey(null);
-      setCategory(CATEGORIES[0]);
-      setPriority(PRIORITIES[0]);
+      resetForm();
     } catch (e) {
-      Alert.alert('Error', e.message);
+      Alert.alert('Could not submit', errorMessage(e, 'Your complaint could not be submitted. Please try again.'));
     } finally {
       setLoading(false);
     }
   };
 
-  function guessContentType(uri) {
-    const u = uri.toLowerCase();
-    if (u.endsWith('.png')) return 'image/png';
-    if (u.endsWith('.webp')) return 'image/webp';
-    return 'image/jpeg';
-  }
-
   return (
     <View style={styles.container}>
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
         {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-            <Ionicons name="arrow-back" size={24} color="#FF4500" />
-          </TouchableOpacity>
           <Text style={styles.headerTitle}>Raise a Complaint</Text>
-          <View style={styles.placeholder} />
         </View>
-
-        {/* Email verification removed - users can submit complaints without verification */}
 
         {/* Photo Upload Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Upload Photos</Text>
-          <Text style={styles.sectionSubtitle}>Add up to 5 photos of the issue</Text>
+          <Text style={styles.sectionSubtitle}>Add up to {MAX_IMAGES} photos of the issue (optional)</Text>
           
           {/* Image Grid */}
           {images.length > 0 && (
@@ -367,16 +212,9 @@ export default function RaiseScreen({ navigation }) {
                   >
                     <Ionicons name="close-circle" size={20} color="#DC3545" />
                   </TouchableOpacity>
-                  <View style={styles.imageStatus}>
-                    <Ionicons 
-                      name={item.uploaded ? "checkmark-circle" : "cloud-upload"} 
-                      size={16} 
-                      color={item.uploaded ? "#28A745" : "#666"} 
-                    />
-                  </View>
                 </View>
               )}
-              keyExtractor={(item, index) => index.toString()}
+              keyExtractor={(item, index) => `${index}-${item.uri}`}
             />
           )}
           
@@ -390,12 +228,6 @@ export default function RaiseScreen({ navigation }) {
               <Ionicons name="images" size={20} color="#FF4500" />
               <Text style={styles.photoActionText}>Gallery</Text>
             </TouchableOpacity>
-            {images.length > 0 && (
-              <TouchableOpacity onPress={uploadImages} style={styles.uploadButton} disabled={loading}>
-                <Ionicons name="cloud-upload" size={20} color="#FFF" />
-                <Text style={styles.uploadButtonText}>Upload</Text>
-              </TouchableOpacity>
-            )}
           </View>
         </View>
 
@@ -408,47 +240,15 @@ export default function RaiseScreen({ navigation }) {
               onChangeText={setDescription}
               placeholder="Describe the civic issue in detail..."
               multiline
+              maxLength={1000}
+              textAlignVertical="top"
               style={styles.descriptionInput}
               placeholderTextColor="#999"
             />
             
-            {/* Voice Input */}
-            <View style={styles.voiceContainer}>
-              <TouchableOpacity
-                onPress={isRecording ? stopRecording : startRecording}
-                style={[styles.voiceButton, isRecording && styles.voiceButtonRecording]}
-                disabled={loading}
-              >
-                <Ionicons 
-                  name={isRecording ? "stop" : "mic"} 
-                  size={20} 
-                  color={isRecording ? "#DC3545" : "#FF4500"} 
-                />
-                <Text style={[styles.voiceButtonText, isRecording && styles.voiceButtonTextRecording]}>
-                  {isRecording ? 'Stop' : 'Voice'}
-                </Text>
-              </TouchableOpacity>
-              
-              {voiceUri && (
-                <View style={styles.voiceNoteContainer}>
-                  <TouchableOpacity onPress={playVoiceNote} style={styles.playButton}>
-                    <Ionicons name="play" size={16} color="#28A745" />
-                  </TouchableOpacity>
-                  <Text style={styles.voiceNoteText}>Voice note recorded</Text>
-                  <TouchableOpacity onPress={deleteVoiceNote} style={styles.deleteVoiceButton}>
-                    <Ionicons name="trash" size={16} color="#DC3545" />
-                  </TouchableOpacity>
-                  {!voiceKey && (
-                    <TouchableOpacity onPress={uploadVoiceNote} style={styles.uploadVoiceButton}>
-                      <Text style={styles.uploadVoiceText}>Upload</Text>
-                    </TouchableOpacity>
-                  )}
-                  {voiceKey && (
-                    <Ionicons name="checkmark-circle" size={16} color="#28A745" />
-                  )}
-                </View>
-              )}
-            </View>
+            <Text style={[styles.charCount, description.trim().length < MIN_DESCRIPTION && styles.charCountLow]}>
+              {description.trim().length}/{MIN_DESCRIPTION} min characters
+            </Text>
           </View>
         </View>
 
@@ -463,8 +263,8 @@ export default function RaiseScreen({ navigation }) {
               style={styles.locationInput}
               placeholderTextColor="#999"
             />
-            <TouchableOpacity onPress={getLocation} style={styles.locationButton}>
-              <Ionicons name="location" size={20} color="#FF4500" />
+            <TouchableOpacity onPress={getLocation} style={styles.locationButton} disabled={locating}>
+              {locating ? <ActivityIndicator size="small" color="#FF4500" /> : <Ionicons name="locate" size={20} color="#FF4500" />}
             </TouchableOpacity>
           </View>
           {coords && (
@@ -528,14 +328,17 @@ export default function RaiseScreen({ navigation }) {
           style={[styles.submitButton, loading && styles.submitButtonDisabled]}
           disabled={loading}
         >
-          <Text style={styles.submitButtonText}>
-            {loading ? 'Submitting...' : 'Submit Complaint'}
-          </Text>
+          {loading ? (
+            <ActivityIndicator color="#FFF" />
+          ) : (
+            <Text style={styles.submitButtonText}>Submit Complaint</Text>
+          )}
         </TouchableOpacity>
       </ScrollView>
+      </KeyboardAvoidingView>
 
       {/* Category Picker Modal */}
-      <Modal visible={showCategoryPicker} transparent animationType="slide">
+      <Modal visible={showCategoryPicker} transparent animationType="slide" onRequestClose={() => setShowCategoryPicker(false)}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContainer}>
             <View style={styles.modalHeader}>
@@ -569,7 +372,7 @@ export default function RaiseScreen({ navigation }) {
       </Modal>
 
       {/* Priority Picker Modal */}
-      <Modal visible={showPriorityPicker} transparent animationType="slide">
+      <Modal visible={showPriorityPicker} transparent animationType="slide" onRequestClose={() => setShowPriorityPicker(false)}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContainer}>
             <View style={styles.modalHeader}>
@@ -610,12 +413,12 @@ export default function RaiseScreen({ navigation }) {
       </Modal>
 
       {/* Success Modal */}
-      <Modal visible={showSuccessModal} transparent animationType="fade">
+      <Modal visible={showSuccessModal} transparent animationType="fade" onRequestClose={() => setShowSuccessModal(false)}>
         <View style={styles.modalOverlay}>
           <View style={styles.successModal}>
             <Ionicons name="checkmark-circle" size={60} color="#28A745" />
             <Text style={styles.successTitle}>Report Submitted Successfully!</Text>
-            <Text style={styles.successText}>Your report ID: {reportId}</Text>
+            <Text style={styles.successText} selectable>Your report ID: {reportId}</Text>
             <Text style={styles.successSubtext}>You can track the status of your complaint using this ID</Text>
             <View style={styles.successButtons}>
               <TouchableOpacity 
@@ -757,7 +560,17 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     backgroundColor: '#FFF',
   },
+  charCount: {
+    fontSize: 12,
+    color: '#28A745',
+    textAlign: 'right',
+    marginTop: 6,
+  },
+  charCountLow: {
+    color: '#999',
+  },
   descriptionInput: {
+    color: '#1A1A1A',
     padding: 15,
     fontSize: 16,
     minHeight: 100,
@@ -836,6 +649,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFF',
   },
   locationInput: {
+    color: '#1A1A1A',
     flex: 1,
     padding: 15,
     fontSize: 16,

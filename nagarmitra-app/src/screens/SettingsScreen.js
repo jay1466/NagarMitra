@@ -8,6 +8,7 @@ import {
   Switch,
   Alert,
 } from 'react-native';
+import { APP_VERSION, RELEASE_DATE, COPYRIGHT_YEAR } from '../appInfo';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -307,7 +308,7 @@ const SettingsScreen = ({ navigation }) => {
 
         {/* App Information */}
         <View style={styles.infoSection}>
-          <Text style={styles.infoTitle}>NagarMitra v1.0.0</Text>
+          <Text style={styles.infoTitle}>NagarMitra v{APP_VERSION}</Text>
           <Text style={styles.infoText}>
             Settings are automatically saved and synced across all your devices.
           </Text>

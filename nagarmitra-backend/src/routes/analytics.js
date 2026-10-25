@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { sendError, parsePaging } from '../utils/http.js';
 import Complaint from '../models/Complaint.js';
 import CommunityPost from '../models/CommunityPost.js';
 import User from '../models/User.js';
@@ -187,7 +188,7 @@ router.get('/dashboard', async (req, res) => {
       wardCode: wardCode || 'all'
     });
   } catch (err) {
-    return res.status(500).json({ error: err.message });
+    return sendError(res, err);
   }
 });
 
@@ -291,7 +292,7 @@ router.get('/trends', async (req, res) => {
       }
     });
   } catch (err) {
-    return res.status(500).json({ error: err.message });
+    return sendError(res, err);
   }
 });
 
@@ -347,7 +348,7 @@ router.get('/wards', async (req, res) => {
       total: wardStats.length
     });
   } catch (err) {
-    return res.status(500).json({ error: err.message });
+    return sendError(res, err);
   }
 });
 
@@ -508,7 +509,7 @@ router.get('/performance', requireFirebaseAuth({ requireVerified: false }), asyn
       timeRange: { days: parseInt(days), startDate }
     });
   } catch (err) {
-    return res.status(500).json({ error: err.message });
+    return sendError(res, err);
   }
 });
 
@@ -590,7 +591,7 @@ router.get('/heatmap', async (req, res) => {
       }
     });
   } catch (err) {
-    return res.status(500).json({ error: err.message });
+    return sendError(res, err);
   }
 });
 
@@ -670,7 +671,7 @@ router.get('/export', requireFirebaseAuth({ requireVerified: false }), async (re
       }
     });
   } catch (err) {
-    return res.status(500).json({ error: err.message });
+    return sendError(res, err);
   }
 });
 

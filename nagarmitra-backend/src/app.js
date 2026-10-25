@@ -8,16 +8,31 @@ import { logger, httpLogger } from './utils/logger.js';
 
 const app = express();
 
+// Render (and most hosts) sit behind one proxy hop; without this every user
+// shares the proxy's IP and one rate-limit bucket.
+app.set('trust proxy', 1);
+
 // Security & basic middlewares
 app.use(helmet());
 app.use(cors({ origin: process.env.CORS_ORIGIN?.split(',') || '*'}));
 app.use(express.json({ limit: '5mb' }));
+// Malformed JSON bodies should be a 400, not a 500
+app.use((err, _req, res, next) => {
+  if (err?.type === 'entity.parse.failed') return res.status(400).json({ error: 'Invalid JSON body' });
+  return next(err);
+});
 app.use(express.urlencoded({ extended: true }));
 app.use(morgan('dev'));
 app.use(httpLogger);
 
 // Rate limiting
-const limiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 300 });
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 600,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many requests. Please wait a minute and try again.' },
+});
 app.use(limiter);
 
 // Health & API routes

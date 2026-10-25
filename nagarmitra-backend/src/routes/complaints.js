@@ -1,6 +1,13 @@
 import { Router } from 'express';
+import { sendError, parsePaging, cleanImage } from '../utils/http.js';
 import Complaint from '../models/Complaint.js';
-import { requireFirebaseAuth } from '../middleware/firebaseAuth.js';
+import { requireFirebaseAuth, optionalFirebaseAuth } from '../middleware/firebaseAuth.js';
+
+const PRIORITIES = ['Low', 'Medium', 'High', 'Critical'];
+
+function isValidCoord(lat, lng) {
+  return Number.isFinite(lat) && Number.isFinite(lng) && Math.abs(lat) <= 90 && Math.abs(lng) <= 180 && !(lat === 0 && lng === 0);
+}
 
 const router = Router();
 
@@ -18,33 +25,36 @@ router.post('/', requireFirebaseAuth({ requireVerified: false }), async (req, re
       media = [], // array of S3 keys
     } = req.body || {};
 
-    if (!description || !category) {
-      return res.status(400).json({ error: 'description and category are required' });
+    if (!description || !String(description).trim() || !category) {
+      return res.status(400).json({ error: 'Description and category are required' });
+    }
+    if (String(description).trim().length < 10) {
+      return res.status(400).json({ error: 'Please describe the issue in at least 10 characters' });
+    }
+    if (!PRIORITIES.includes(priority)) {
+      return res.status(400).json({ error: 'Invalid priority' });
     }
 
-    const reportId = await Complaint.generateReportId(wardCode);
+    const lat = Number(location?.lat);
+    const lng = Number(location?.lng);
+    const hasLocation = location != null && isValidCoord(lat, lng);
 
-    const doc = await Complaint.create({
-      reportId,
+    const doc = await Complaint.createWithReportId(wardCode, {
       title,
-      description,
+      description: String(description).trim(),
       category,
       priority,
       address,
       wardCode,
-      location: location?.lat && location?.lng
-        ? { type: 'Point', coordinates: [location.lng, location.lat] }
-        : undefined,
-      media,
-      // store auth context
-      // you may later map firebase uid to a User model, for now store in metadata fields
+      location: hasLocation ? { type: 'Point', coordinates: [lng, lat] } : undefined,
+      media: Array.isArray(media) ? media.map(cleanImage).filter(Boolean).slice(0, 3) : [],
       firebaseUid: req.user?.uid,
       firebaseEmail: req.user?.email,
     });
 
     return res.status(201).json({ complaint: doc, reportId: doc.reportId });
   } catch (err) {
-    return res.status(500).json({ error: err.message });
+    return sendError(res, err);
   }
 });
 
@@ -62,35 +72,36 @@ router.get('/:id', async (req, res) => {
 // Get by report id
 router.get('/report/:reportId', async (req, res) => {
   try {
-    const doc = await Complaint.findOne({ reportId: req.params.reportId });
-    if (!doc) return res.status(404).json({ error: 'Not found' });
+    const doc = await Complaint.findOne({ reportId: String(req.params.reportId).trim().toUpperCase() });
+    if (!doc) return res.status(404).json({ error: 'No report found with this ID' });
     return res.json({ complaint: doc });
   } catch (err) {
-    return res.status(500).json({ error: err.message });
+    return sendError(res, err);
   }
 });
 
 // List with optional filters
-router.get('/', async (req, res) => {
+router.get('/', optionalFirebaseAuth(), async (req, res) => {
   try {
-    const { category, ward, status, mine, page = 1, limit = 20, uid } = req.query;
+    const { category, ward, status, mine } = req.query;
+    const { page, limit, skip } = parsePaging(req.query);
     const q = {};
-    if (category) q.category = category;
-    if (ward) q.wardCode = ward;
-    if (status) q.status = status;
-    if (mine === '1' && uid) {
-      q.firebaseUid = uid;
+    if (category) q.category = String(category);
+    if (ward) q.wardCode = String(ward);
+    if (status) q.status = String(status);
+    if (mine === '1') {
+      // "My reports" is based on the verified login, never on a uid from the query string
+      if (!req.user?.uid) return res.status(401).json({ error: 'Please log in to see your reports' });
+      q.firebaseUid = req.user.uid;
     }
 
-    const docs = await Complaint.find(q)
-      .sort({ createdAt: -1 })
-      .skip((Number(page) - 1) * Number(limit))
-      .limit(Number(limit));
-
-    const total = await Complaint.countDocuments(q);
-    return res.json({ items: docs, total, page: Number(page), limit: Number(limit) });
+    const [docs, total] = await Promise.all([
+      Complaint.find(q).select('-media -internalNotes').sort({ createdAt: -1 }).skip(skip).limit(limit),
+      Complaint.countDocuments(q),
+    ]);
+    return res.json({ items: docs, total, page, limit });
   } catch (err) {
-    return res.status(500).json({ error: err.message });
+    return sendError(res, err);
   }
 });
 
@@ -178,7 +189,7 @@ router.post('/create-samples', async (req, res) => {
     });
   } catch (err) {
     console.error('Error creating sample complaints:', err);
-    return res.status(500).json({ error: err.message });
+    return sendError(res, err);
   }
 });
 

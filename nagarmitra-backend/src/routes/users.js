@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { sendError, parsePaging, cleanImage } from '../utils/http.js';
 import User from '../models/User.js';
 import Complaint from '../models/Complaint.js';
 import CommunityPost from '../models/CommunityPost.js';
@@ -28,7 +29,7 @@ router.get('/me', requireFirebaseAuth({ requireVerified: false }), async (req, r
       }
     });
   } catch (err) {
-    return res.status(500).json({ error: err.message });
+    return sendError(res, err);
   }
 });
 
@@ -65,6 +66,13 @@ router.put('/me', requireFirebaseAuth({ requireVerified: false }), async (req, r
       }
     });
 
+    if (typeof req.body.phoneNumber === 'string') {
+      updateData.phoneNumber = req.body.phoneNumber.trim().slice(0, 20);
+    }
+    if (req.body.photoURL !== undefined) {
+      updateData.photoURL = req.body.photoURL === null ? undefined : cleanImage(req.body.photoURL);
+    }
+
     // Update location if coordinates provided
     if (req.body.location && req.body.location.coordinates) {
       updateData.location = {
@@ -73,7 +81,14 @@ router.put('/me', requireFirebaseAuth({ requireVerified: false }), async (req, r
       };
     }
 
-    Object.assign(user, updateData);
+    // set() each path so updating one profile field doesn't wipe the others
+    for (const [key, value] of Object.entries(updateData)) {
+      if (key === 'profile') {
+        for (const [child, v] of Object.entries(value)) user.set(`profile.${child}`, v);
+      } else {
+        user.set(key, value);
+      }
+    }
     await user.save();
 
     return res.json({
@@ -83,7 +98,7 @@ router.put('/me', requireFirebaseAuth({ requireVerified: false }), async (req, r
       }
     });
   } catch (err) {
-    return res.status(500).json({ error: err.message });
+    return sendError(res, err);
   }
 });
 
@@ -120,7 +135,7 @@ router.put('/me/preferences', requireFirebaseAuth({ requireVerified: false }), a
       preferences: user.preferences
     });
   } catch (err) {
-    return res.status(500).json({ error: err.message });
+    return sendError(res, err);
   }
 });
 
@@ -198,7 +213,7 @@ router.get('/me/stats', requireFirebaseAuth({ requireVerified: false }), async (
       lastActive: user.lastLoginAt
     });
   } catch (err) {
-    return res.status(500).json({ error: err.message });
+    return sendError(res, err);
   }
 });
 
@@ -229,7 +244,7 @@ router.get('/me/complaints', requireFirebaseAuth({ requireVerified: false }), as
       }
     });
   } catch (err) {
-    return res.status(500).json({ error: err.message });
+    return sendError(res, err);
   }
 });
 
@@ -266,7 +281,7 @@ router.get('/me/posts', requireFirebaseAuth({ requireVerified: false }), async (
       }
     });
   } catch (err) {
-    return res.status(500).json({ error: err.message });
+    return sendError(res, err);
   }
 });
 
@@ -317,7 +332,7 @@ router.get('/me/notifications', requireFirebaseAuth({ requireVerified: false }),
       }
     });
   } catch (err) {
-    return res.status(500).json({ error: err.message });
+    return sendError(res, err);
   }
 });
 
@@ -342,7 +357,7 @@ router.put('/me/notifications/:notificationId/read', requireFirebaseAuth({ requi
 
     return res.json({ success: true });
   } catch (err) {
-    return res.status(500).json({ error: err.message });
+    return sendError(res, err);
   }
 });
 
@@ -367,7 +382,7 @@ router.put('/me/notifications/read-all', requireFirebaseAuth({ requireVerified: 
 
     return res.json({ success: true });
   } catch (err) {
-    return res.status(500).json({ error: err.message });
+    return sendError(res, err);
   }
 });
 
@@ -404,7 +419,7 @@ router.get('/:userId', async (req, res) => {
       }
     });
   } catch (err) {
-    return res.status(500).json({ error: err.message });
+    return sendError(res, err);
   }
 });
 
@@ -443,7 +458,7 @@ router.get('/', requireFirebaseAuth({ requireVerified: false }), async (req, res
       }
     });
   } catch (err) {
-    return res.status(500).json({ error: err.message });
+    return sendError(res, err);
   }
 });
 
@@ -468,7 +483,7 @@ router.delete('/me', requireFirebaseAuth({ requireVerified: false }), async (req
 
     return res.json({ success: true, message: 'Account deactivated successfully' });
   } catch (err) {
-    return res.status(500).json({ error: err.message });
+    return sendError(res, err);
   }
 });
 

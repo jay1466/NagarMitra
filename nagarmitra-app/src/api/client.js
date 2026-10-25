@@ -1,61 +1,25 @@
 import { BASE_URL } from '../config';
 import { auth } from '../lib/firebase';
 
-export async function apiGet(path) {
-  const headers = await authHeaders();
-  const res = await fetch(`${BASE_URL}${path}`, { headers });
-  if (!res.ok) throw new Error(`GET ${path} failed: ${res.status}`);
-  return res.json();
+// The free backend can take ~50s to wake up, so allow a generous timeout.
+const TIMEOUT_MS = 45000;
+
+export class ApiError extends Error {
+  constructor(message, status = 0) {
+    super(message);
+    this.name = 'ApiError';
+    this.status = status;
+  }
 }
 
-export async function apiPost(path, body) {
-  const headers = await authHeaders({ 'Content-Type': 'application/json' });
-  const res = await fetch(`${BASE_URL}${path}`, {
-    method: 'POST',
-    headers,
-    body: JSON.stringify(body),
-  });
-  if (!res.ok) {
-    const msg = await safeRead(res);
-    throw new Error(`POST ${path} failed: ${res.status} ${msg}`);
-  }
-  return res.json();
-}
-
-export async function apiPut(path, body) {
-  const headers = await authHeaders({ 'Content-Type': 'application/json' });
-  const res = await fetch(`${BASE_URL}${path}`, {
-    method: 'PUT',
-    headers,
-    body: JSON.stringify(body),
-  });
-  if (!res.ok) {
-    const msg = await safeRead(res);
-    throw new Error(`PUT ${path} failed: ${res.status} ${msg}`);
-  }
-  return res.json();
-}
-
-export async function apiDelete(path) {
-  const headers = await authHeaders();
-  const res = await fetch(`${BASE_URL}${path}`, {
-    method: 'DELETE',
-    headers,
-  });
-  if (!res.ok) {
-    const msg = await safeRead(res);
-    throw new Error(`DELETE ${path} failed: ${res.status} ${msg}`);
-  }
-  return res.json();
-}
-
-async function safeRead(res) {
-  try {
-    const t = await res.text();
-    return t;
-  } catch (e) {
-    return '';
-  }
+function friendlyStatusMessage(status) {
+  if (status === 401) return 'Your session has expired. Please log in again.';
+  if (status === 403) return 'You are not allowed to do this.';
+  if (status === 404) return 'Not found.';
+  if (status === 413) return 'The photo is too large. Please choose a smaller one.';
+  if (status === 429) return 'Too many requests. Please wait a minute and try again.';
+  if (status >= 500) return 'The server had a problem. Please try again shortly.';
+  return 'Request failed. Please try again.';
 }
 
 async function authHeaders(base = {}) {
@@ -65,9 +29,65 @@ async function authHeaders(base = {}) {
       const token = await user.getIdToken();
       return { ...base, Authorization: `Bearer ${token}` };
     }
-  } catch {}
+  } catch {
+    // Not logged in / token refresh failed: send the request without auth
+  }
   return base;
 }
+
+async function request(method, path, body) {
+  const headers = await authHeaders(body !== undefined ? { 'Content-Type': 'application/json' } : {});
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+
+  let res;
+  try {
+    res = await fetch(`${BASE_URL}${path}`, {
+      method,
+      headers,
+      body: body !== undefined ? JSON.stringify(body) : undefined,
+      signal: controller.signal,
+    });
+  } catch (e) {
+    if (e?.name === 'AbortError') {
+      throw new ApiError('The server is taking too long to respond. Please try again.');
+    }
+    throw new ApiError('No internet connection, or the server is unreachable.');
+  } finally {
+    clearTimeout(timer);
+  }
+
+  let data = null;
+  try {
+    data = await res.json();
+  } catch {
+    data = null;
+  }
+
+  if (!res.ok) {
+    // Prefer the server's own message when it sent one
+    const serverMsg = typeof data?.error === 'string' ? data.error : null;
+    throw new ApiError(serverMsg || friendlyStatusMessage(res.status), res.status);
+  }
+  return data ?? {};
+}
+
+export const apiGet = (path) => request('GET', path);
+export const apiPost = (path, body = {}) => request('POST', path, body);
+export const apiPut = (path, body = {}) => request('PUT', path, body);
+export const apiDelete = (path) => request('DELETE', path);
+
+// Turn any thrown value into text that is safe to show a user.
+export function errorMessage(e, fallback = 'Something went wrong. Please try again.') {
+  if (e instanceof ApiError) return e.message;
+  return fallback;
+}
+
+const qs = (params = {}) => {
+  const clean = Object.fromEntries(Object.entries(params).filter(([, v]) => v !== undefined && v !== null && v !== ''));
+  const query = new URLSearchParams(clean).toString();
+  return query ? `?${query}` : '';
+};
 
 // User API functions
 export const userAPI = {
@@ -75,28 +95,17 @@ export const userAPI = {
   updateProfile: (data) => apiPut('/api/v1/users/me', data),
   updatePreferences: (data) => apiPut('/api/v1/users/me/preferences', data),
   getStats: () => apiGet('/api/v1/users/me/stats'),
-  getComplaints: (params = {}) => {
-    const query = new URLSearchParams(params).toString();
-    return apiGet(`/api/v1/users/me/complaints${query ? '?' + query : ''}`);
-  },
-  getPosts: (params = {}) => {
-    const query = new URLSearchParams(params).toString();
-    return apiGet(`/api/v1/users/me/posts${query ? '?' + query : ''}`);
-  },
-  getNotifications: (params = {}) => {
-    const query = new URLSearchParams(params).toString();
-    return apiGet(`/api/v1/users/me/notifications${query ? '?' + query : ''}`);
-  },
+  getComplaints: (params) => apiGet(`/api/v1/users/me/complaints${qs(params)}`),
+  getPosts: (params) => apiGet(`/api/v1/users/me/posts${qs(params)}`),
+  getNotifications: (params) => apiGet(`/api/v1/users/me/notifications${qs(params)}`),
   markNotificationRead: (id) => apiPut(`/api/v1/users/me/notifications/${id}/read`),
   markAllNotificationsRead: () => apiPut('/api/v1/users/me/notifications/read-all'),
 };
 
 // Community API functions
 export const communityAPI = {
-  getPosts: (params = {}) => {
-    const query = new URLSearchParams(params).toString();
-    return apiGet(`/api/v1/community/posts${query ? '?' + query : ''}`);
-  },
+  getPosts: (params) => apiGet(`/api/v1/community/posts${qs(params)}`),
+  getStories: () => apiGet('/api/v1/community/stories'),
   getTrendingPosts: (limit = 10) => apiGet(`/api/v1/community/posts/trending?limit=${limit}`),
   getPost: (id) => apiGet(`/api/v1/community/posts/${id}`),
   createPost: (data) => apiPost('/api/v1/community/posts', data),
@@ -105,86 +114,62 @@ export const communityAPI = {
   sharePost: (id) => apiPost(`/api/v1/community/posts/${id}/share`),
   reportPost: (id, reason) => apiPost(`/api/v1/community/posts/${id}/report`, { reason }),
   deletePost: (id) => apiDelete(`/api/v1/community/posts/${id}`),
-  getStats: (params = {}) => {
-    const query = new URLSearchParams(params).toString();
-    return apiGet(`/api/v1/community/stats${query ? '?' + query : ''}`);
-  },
+  getStats: (params) => apiGet(`/api/v1/community/stats${qs(params)}`),
 };
 
 // Analytics API functions
 export const analyticsAPI = {
-  getDashboard: (params = {}) => {
-    const query = new URLSearchParams(params).toString();
-    return apiGet(`/api/v1/analytics/dashboard${query ? '?' + query : ''}`);
-  },
-  getTrends: (params = {}) => {
-    const query = new URLSearchParams(params).toString();
-    return apiGet(`/api/v1/analytics/trends${query ? '?' + query : ''}`);
-  },
-  getWards: (params = {}) => {
-    const query = new URLSearchParams(params).toString();
-    return apiGet(`/api/v1/analytics/wards${query ? '?' + query : ''}`);
-  },
-  getPerformance: (params = {}) => {
-    const query = new URLSearchParams(params).toString();
-    return apiGet(`/api/v1/analytics/performance${query ? '?' + query : ''}`);
-  },
-  getHeatmap: (params = {}) => {
-    const query = new URLSearchParams(params).toString();
-    return apiGet(`/api/v1/analytics/heatmap${query ? '?' + query : ''}`);
-  },
-  export: (params = {}) => {
-    const query = new URLSearchParams(params).toString();
-    return apiGet(`/api/v1/analytics/export${query ? '?' + query : ''}`);
-  },
+  getDashboard: (params) => apiGet(`/api/v1/analytics/dashboard${qs(params)}`),
+  getTrends: (params) => apiGet(`/api/v1/analytics/trends${qs(params)}`),
+  getWards: (params) => apiGet(`/api/v1/analytics/wards${qs(params)}`),
+  getPerformance: (params) => apiGet(`/api/v1/analytics/performance${qs(params)}`),
+  getHeatmap: (params) => apiGet(`/api/v1/analytics/heatmap${qs(params)}`),
+  export: (params) => apiGet(`/api/v1/analytics/export${qs(params)}`),
 };
 
-// Enhanced complaint API functions
+// Complaint API functions
 export const complaintAPI = {
   create: (data) => apiPost('/api/v1/complaints', data),
   getById: (id) => apiGet(`/api/v1/complaints/${id}`),
-  getByReportId: (reportId) => apiGet(`/api/v1/complaints/report/${reportId}`),
-  getList: (params = {}) => {
-    const query = new URLSearchParams(params).toString();
-    return apiGet(`/api/v1/complaints${query ? '?' + query : ''}`);
-  },
+  getByReportId: (reportId) => apiGet(`/api/v1/complaints/report/${encodeURIComponent(reportId.trim())}`),
+  getList: (params) => apiGet(`/api/v1/complaints${qs(params)}`),
   vote: (id, type) => apiPost(`/api/v1/complaints/${id}/vote`, { type }),
   addNote: (id, note) => apiPost(`/api/v1/complaints/${id}/notes`, { note }),
-  updateStatus: (id, status, reason, notes) => 
+  updateStatus: (id, status, reason, notes) =>
     apiPut(`/api/v1/complaints/${id}/status`, { status, reason, notes }),
+};
+
+export const feedbackAPI = {
+  submit: (data) => apiPost('/api/v1/feedback', data),
 };
 
 // AI Detection API functions
 export const detectAPI = {
   detectImage: async (imageUri) => {
     const formData = new FormData();
-    const filename = imageUri.split('/').pop();
+    const filename = imageUri.split('/').pop() || 'photo.jpg';
     const match = /\.(\w+)$/.exec(filename);
-    const type = match ? `image/${match[1]}` : `image`;
-
+    const type = match ? `image/${match[1].toLowerCase() === 'jpg' ? 'jpeg' : match[1].toLowerCase()}` : 'image/jpeg';
     formData.append('image', { uri: imageUri, name: filename, type });
 
-    // Use safeRead and authHeaders inline (manually using fetch because we need multipart/form-data)
-    let headers = { 'Content-Type': 'multipart/form-data' };
+    // Let fetch set the multipart boundary itself; only add auth
+    const headers = await authHeaders();
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
     try {
-      const user = auth.currentUser;
-      if (user) {
-        const token = await user.getIdToken();
-        headers['Authorization'] = `Bearer ${token}`;
-      }
-    } catch (e) {}
-
-    const res = await fetch(`${BASE_URL}/api/v1/detect`, {
-      method: 'POST',
-      headers,
-      body: formData,
-    });
-
-    if (!res.ok) {
-      let msg = '';
-      try { msg = await res.text(); } catch (e) {}
-      throw new Error(`Detection failed: ${res.status} ${msg}`);
+      const res = await fetch(`${BASE_URL}/api/v1/detect`, {
+        method: 'POST',
+        headers,
+        body: formData,
+        signal: controller.signal,
+      });
+      if (!res.ok) throw new ApiError(friendlyStatusMessage(res.status), res.status);
+      return await res.json();
+    } catch (e) {
+      if (e instanceof ApiError) throw e;
+      throw new ApiError('Could not analyse the photo right now.');
+    } finally {
+      clearTimeout(timer);
     }
-    return res.json();
-  }
+  },
 };

@@ -29,7 +29,7 @@ const CommunityPostSchema = new mongoose.Schema(
     location: {
       address: { type: String },
       coordinates: {
-        type: { type: String, enum: ['Point'], default: 'Point' },
+        type: { type: String, enum: ['Point'] },
         coordinates: { type: [Number], index: '2dsphere' }, // [lng, lat]
       },
       wardCode: { type: String, index: true },
