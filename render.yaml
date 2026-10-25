@@ -1,12 +1,27 @@
 services:
   - type: web
     name: nagarmitra-backend
-    env: node
+    runtime: node
+    plan: free
+    region: singapore
     rootDir: nagarmitra-backend
     buildCommand: npm install
     startCommand: npm start
+    healthCheckPath: /api/v1/health
     envVars:
       - key: NODE_ENV
         value: production
       - key: NODE_VERSION
         value: 20
+      - key: CORS_ORIGIN
+        value: "*"
+      - key: MONGODB_DB
+        value: NagarMitra
+      - key: MONGODB_URI
+        sync: false
+      - key: FIREBASE_PROJECT_ID
+        sync: false
+      - key: FIREBASE_CLIENT_EMAIL
+        sync: false
+      - key: FIREBASE_PRIVATE_KEY_BASE64
+        sync: false
