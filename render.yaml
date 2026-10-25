@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: nagarmitra-backend
+    env: node
+    rootDir: nagarmitra-backend
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NODE_VERSION
+        value: 20

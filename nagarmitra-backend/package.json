@@ -1,0 +1,46 @@
+{
+  "name": "nagarmitra-backend",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "src/server.js",
+  "scripts": {
+    "dev": "nodemon src/server.js",
+    "start": "node src/server.js",
+    "lint": "eslint .",
+    "mock-data": "node src/scripts/generateMockData.js",
+    "mock-generate": "node src/scripts/generateMockData.js generate",
+    "mock-hotspots": "node src/scripts/generateMockData.js hotspots",
+    "mock-full": "node src/scripts/generateMockData.js full",
+    "mock-cleanup": "node src/scripts/generateMockData.js cleanup"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.634.0",
+    "@aws-sdk/s3-request-presigner": "^3.634.0",
+    "@tensorflow-models/mobilenet": "^2.1.1",
+    "@tensorflow/tfjs": "^4.22.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.6.1",
+    "express": "^4.19.2",
+    "express-rate-limit": "^7.4.0",
+    "firebase-admin": "^10.3.0",
+    "helmet": "^7.1.0",
+    "jpeg-js": "^0.4.4",
+    "mongoose": "^8.18.1",
+    "morgan": "^1.10.0",
+    "multer": "^2.1.1",
+    "node-telegram-bot-api": "^0.63.0",
+    "pngjs": "^7.0.0",
+    "winston": "^3.13.0"
+  },
+  "devDependencies": {
+    "eslint": "^9.9.0",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-import": "^2.29.1",
+    "nodemon": "^3.1.4",
+    "prettier": "^3.3.2"
+  }
+}

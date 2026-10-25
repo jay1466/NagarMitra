@@ -1,0 +1,9 @@
+{
+  "env": { "es2022": true, "node": true },
+  "extends": ["eslint:recommended", "plugin:import/recommended", "prettier"],
+  "parserOptions": { "sourceType": "module" },
+  "rules": {
+    "no-unused-vars": ["warn", { "argsIgnorePattern": "^_" }],
+    "import/no-unresolved": "off"
+  }
+}

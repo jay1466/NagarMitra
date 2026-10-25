@@ -1,0 +1,11 @@
+node_modules/
+.env
+npm-debug.log*
+yarn-error.log
+.DS_Store
+coverage/
+dist/
+
+# Firebase service account key
+*firebase-adminsdk*.json
+.env
