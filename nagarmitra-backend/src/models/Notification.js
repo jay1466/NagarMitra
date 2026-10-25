@@ -19,6 +19,12 @@ const NotificationSchema = new mongoose.Schema(
       type: String,
       enum: [
         'complaint_confirmed',
+        'complaint_assigned',
+        'complaint_reminder',
+        'complaint_escalated',
+        'complaint_closed',
+        'complaint_reopened',
+        'complaint_nudge',
         'complaint_acknowledged', 
         'complaint_in_progress',
         'complaint_resolved',

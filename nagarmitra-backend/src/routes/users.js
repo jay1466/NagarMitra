@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { sendError, parsePaging, cleanImage } from '../utils/http.js';
+import { isValidLocation } from '../config/civic.js';
 import User from '../models/User.js';
 import Complaint from '../models/Complaint.js';
 import CommunityPost from '../models/CommunityPost.js';
@@ -66,6 +67,14 @@ router.put('/me', requireFirebaseAuth({ requireVerified: false }), async (req, r
       }
     });
 
+    // Home location is self-service for citizens only; staff jurisdiction is set by admins
+    if (user.role === 'citizen' && req.body.state !== undefined) {
+      if (!isValidLocation(req.body.state, req.body.district)) {
+        return res.status(400).json({ error: 'Choose a valid state and district' });
+      }
+      updateData.state = req.body.state;
+      updateData.district = req.body.district;
+    }
     if (typeof req.body.phoneNumber === 'string') {
       updateData.phoneNumber = req.body.phoneNumber.trim().slice(0, 20);
     }
@@ -423,40 +432,18 @@ router.get('/:userId', async (req, res) => {
   }
 });
 
-// Search users (admin/moderator feature)
-router.get('/', requireFirebaseAuth({ requireVerified: false }), async (req, res) => {
+// Register this phone for push notifications (Expo push token)
+router.put('/me/push-token', requireFirebaseAuth({ requireVerified: false }), async (req, res) => {
   try {
-    // This could be restricted to admin users in the future
-    const { search, page = 1, limit = 20 } = req.query;
-    
-    let query = { isActive: true };
-    
-    if (search) {
-      query.$or = [
-        { displayName: { $regex: search, $options: 'i' } },
-        { email: { $regex: search, $options: 'i' } },
-        { 'profile.firstName': { $regex: search, $options: 'i' } },
-        { 'profile.lastName': { $regex: search, $options: 'i' } }
-      ];
+    const token = String(req.body?.token || '');
+    if (token && !/^Expo(nent)?PushToken\[[^\]]+\]$/.test(token)) {
+      return res.status(400).json({ error: 'Invalid push token' });
     }
-
-    const users = await User.find(query)
-      .select('displayName photoURL profile.firstName profile.lastName profile.city stats createdAt')
-      .sort({ createdAt: -1 })
-      .skip((page - 1) * limit)
-      .limit(parseInt(limit));
-
-    const total = await User.countDocuments(query);
-
-    return res.json({
-      users,
-      pagination: {
-        current: parseInt(page),
-        total: Math.ceil(total / parseInt(limit)),
-        count: users.length,
-        totalUsers: total
-      }
-    });
+    const user = await User.findByFirebaseUid(req.user.uid);
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    user.expoPushToken = token || undefined;
+    await user.save();
+    return res.json({ ok: true });
   } catch (err) {
     return sendError(res, err);
   }

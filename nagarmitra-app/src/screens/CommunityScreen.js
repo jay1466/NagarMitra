@@ -15,14 +15,13 @@ import {
   Animated,
   Platform
 } from 'react-native';
-import { Ionicons, MaterialIcons } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
-import { auth } from '../lib/firebase';
 import { communityAPI, errorMessage } from '../api/client';
 import { toCompressedDataUri } from '../utils/image';
 
-const { width, height } = Dimensions.get('window');
+const { width } = Dimensions.get('window');
 
 export default function CommunityScreen({ navigation }) {
   const [posts, setPosts] = useState([]);

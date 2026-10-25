@@ -27,18 +27,39 @@ const ComplaintSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ['submitted', 'acknowledged', 'in_progress', 'resolved', 'rejected'],
+      enum: ['submitted', 'assigned', 'acknowledged', 'in_progress', 'resolved', 'closed', 'rejected'],
       default: 'submitted',
       index: true,
     },
     address: { type: String },
     location: {
       type: { type: String, enum: ['Point'] },
-      coordinates: { type: [Number], index: '2dsphere' }, // [lng, lat]
+      coordinates: { type: [Number], default: undefined, index: '2dsphere' }, // [lng, lat]
     },
     wardCode: { type: String, index: true },
     media: [{ type: String }], // store S3 keys for now
     
+    // Routing & service levels
+    state: { type: String, index: true }, // state code
+    district: { type: String, index: true }, // district code
+    department: { type: String, index: true },
+    assignedAt: { type: Date },
+    acknowledgeDueAt: { type: Date },
+    dueAt: { type: Date, index: true },
+    escalationLevel: { type: Number, default: 0 }, // 0 none · 1 officer reminded · 2 district · 3 state · 4 super admin
+    escalatedAt: { type: Date },
+    lastReminderAt: { type: Date },
+    lastCitizenNudgeAt: { type: Date },
+    reopenCount: { type: Number, default: 0 },
+    closedAt: { type: Date },
+    citizenRating: { type: Number, min: 1, max: 5 },
+    resolution: {
+      note: { type: String },
+      photo: { type: String },
+      at: { type: Date },
+    },
+    rejectionReason: { type: String },
+
     // Firebase Auth integration
     firebaseUid: { type: String, index: true },
     firebaseEmail: { type: String },
@@ -48,6 +69,8 @@ const ComplaintSchema = new mongoose.Schema(
       status: { type: String },
       changedAt: { type: Date, default: Date.now },
       changedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+      byName: { type: String },
+      byRole: { type: String },
       reason: { type: String },
       notes: { type: String }
     }],
@@ -111,6 +134,8 @@ ComplaintSchema.index({ firebaseUid: 1, createdAt: -1 });
 ComplaintSchema.index({ status: 1, wardCode: 1 });
 ComplaintSchema.index({ verificationStatus: 1 });
 ComplaintSchema.index({ assignedTo: 1, status: 1 });
+ComplaintSchema.index({ state: 1, district: 1, department: 1, status: 1 });
+ComplaintSchema.index({ status: 1, dueAt: 1 });
 
 // Virtual properties
 ComplaintSchema.virtual('daysOpen').get(function() {
@@ -139,12 +164,12 @@ function pad(num, size) {
   return s;
 }
 
-ComplaintSchema.statics.generateReportId = async function (wardCode = 'WARD') {
+ComplaintSchema.statics.generateReportId = async function (regionCode = 'IN') {
   const today = new Date();
   const y = today.getFullYear();
   const m = pad(today.getMonth() + 1, 2);
   const d = pad(today.getDate(), 2);
-  const safeWard = String(wardCode).replace(/[^A-Za-z0-9-]/g, '').slice(0, 12) || 'WARD';
+  const safeWard = String(regionCode).replace(/[^A-Za-z0-9-]/g, '').slice(0, 12) || 'IN';
   const prefix = `NM-${safeWard}-${y}${m}${d}`;
   const count = await this.countDocuments({ reportId: new RegExp(`^${prefix}-`) });
   return `${prefix}-${pad(count + 1, 4)}`;
@@ -152,9 +177,9 @@ ComplaintSchema.statics.generateReportId = async function (wardCode = 'WARD') {
 
 // Two reports submitted at the same moment can get the same sequence number;
 // retry with the next number instead of failing the user's submission.
-ComplaintSchema.statics.createWithReportId = async function (wardCode, data, attempts = 5) {
+ComplaintSchema.statics.createWithReportId = async function (stateCode, data, attempts = 5) {
   for (let i = 0; i < attempts; i++) {
-    const reportId = await this.generateReportId(wardCode);
+    const reportId = await this.generateReportId(stateCode);
     try {
       return await this.create({ ...data, reportId });
     } catch (err) {

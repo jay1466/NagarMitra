@@ -1,16 +1,20 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, TextInput, Alert, ScrollView, Image, TouchableOpacity, StyleSheet, FlatList, Modal, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
-import * as Location from 'expo-location';
 import { Ionicons } from '@expo/vector-icons';
 import { complaintAPI, detectAPI, errorMessage } from '../api/client';
 import { CATEGORIES, PRIORITIES } from '../constants';
 import { toCompressedDataUri } from '../utils/image';
+import LocationPicker from '../components/LocationPicker';
+import { useSession, departmentName } from '../context/SessionContext';
+import { placeLabel } from '../data/india';
 
 const MAX_IMAGES = 3;
 const MIN_DESCRIPTION = 10;
 
 export default function RaiseScreen({ navigation }) {
+  const { me, meta } = useSession();
+  const [place, setPlace] = useState({ state: null, district: null });
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState(CATEGORIES[0]);
   const [priority, setPriority] = useState('Medium');
@@ -18,13 +22,22 @@ export default function RaiseScreen({ navigation }) {
   const [coords, setCoords] = useState(null);
   const [images, setImages] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [locating, setLocating] = useState(false);
   const [showCategoryPicker, setShowCategoryPicker] = useState(false);
   const [showPriorityPicker, setShowPriorityPicker] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [detectingCategory, setDetectingCategory] = useState(false);
   const [detectedConfidence, setDetectedConfidence] = useState(null);
   const [reportId, setReportId] = useState('');
+
+  useEffect(() => {
+    if (me?.state && !place.state) setPlace({ state: me.state, district: me.district || null });
+  }, [me?.state, me?.district]);
+
+  const onPlaceChange = (next) => {
+    setPlace({ state: next.state, district: next.district });
+    if (next.coords) setCoords(next.coords);
+    if (next.address && !address.trim()) setAddress(next.address);
+  };
 
   // AI suggestion is a nice-to-have: failures are silent and never block the form
   const detectImageCategory = async (uri) => {
@@ -99,42 +112,12 @@ export default function RaiseScreen({ navigation }) {
     if (images.length === 1) setDetectedConfidence(null);
   };
 
-  const getLocation = async () => {
-    setLocating(true);
-    try {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') {
-        Alert.alert('Permission needed', 'Please allow location access, or type the address manually.');
-        return;
-      }
-      const servicesOn = await Location.hasServicesEnabledAsync();
-      if (!servicesOn) {
-        Alert.alert('Location is off', 'Please turn on GPS/Location on your phone and try again.');
-        return;
-      }
-      const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
-      setCoords({ lat: loc.coords.latitude, lng: loc.coords.longitude });
-      try {
-        const [g] = await Location.reverseGeocodeAsync({ latitude: loc.coords.latitude, longitude: loc.coords.longitude });
-        if (g) {
-          const parts = [g.name, g.street, g.district, g.city, g.region, g.postalCode].filter(Boolean);
-          setAddress([...new Set(parts)].join(', '));
-        }
-      } catch {
-        // Coordinates are enough; the address field stays editable
-      }
-    } catch {
-      Alert.alert('Location error', 'Could not get your location. Please type the address manually.');
-    } finally {
-      setLocating(false);
-    }
-  };
-
   const resetForm = () => {
     setDescription('');
     setAddress('');
     setCoords(null);
     setImages([]);
+    setPlace(me?.state ? { state: me.state, district: me.district || null } : { state: null, district: null });
     setCategory(CATEGORIES[0]);
     setPriority('Medium');
     setDetectedConfidence(null);
@@ -146,8 +129,8 @@ export default function RaiseScreen({ navigation }) {
       Alert.alert('Add more detail', `Please describe the issue in at least ${MIN_DESCRIPTION} characters.`);
       return;
     }
-    if (!address.trim() && !coords) {
-      Alert.alert('Location needed', 'Please tap the location button or type the address of the issue.');
+    if (!place.state || !place.district) {
+      Alert.alert('Location needed', 'Please choose the state and district of the issue, or tap "Detect my location".');
       return;
     }
 
@@ -169,7 +152,8 @@ export default function RaiseScreen({ navigation }) {
         category,
         priority,
         address: address.trim(),
-        wardCode: 'W-01',
+        state: place.state,
+        district: place.district,
         location: coords,
         media,
       });
@@ -255,22 +239,26 @@ export default function RaiseScreen({ navigation }) {
         {/* Location Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Location</Text>
-          <View style={styles.locationContainer}>
-            <TextInput
-              value={address}
-              onChangeText={setAddress}
-              placeholder="Enter address or use GPS"
-              style={styles.locationInput}
-              placeholderTextColor="#999"
-            />
-            <TouchableOpacity onPress={getLocation} style={styles.locationButton} disabled={locating}>
-              {locating ? <ActivityIndicator size="small" color="#FF4500" /> : <Ionicons name="locate" size={20} color="#FF4500" />}
-            </TouchableOpacity>
-          </View>
+          <LocationPicker value={place} onChange={onPlaceChange} label="" />
+          <TextInput
+            value={address}
+            onChangeText={setAddress}
+            placeholder="Street, area or landmark (optional)"
+            style={[styles.locationInput, styles.addressInput]}
+            placeholderTextColor="#999"
+          />
           {coords && (
             <Text style={styles.coordsText}>
-              📍 {coords.lat.toFixed(6)}, {coords.lng.toFixed(6)}
+              📍 GPS {coords.lat.toFixed(5)}, {coords.lng.toFixed(5)}
             </Text>
+          )}
+          {place.district && (
+            <View style={styles.routeBox}>
+              <Ionicons name="git-branch-outline" size={16} color="#2E7D32" />
+              <Text style={styles.routeText}>
+                Will be sent to the {departmentName(meta, meta.categoryToDepartment?.[category]) || 'concerned'} officer of {placeLabel(place.state, place.district)}
+              </Text>
+            </View>
           )}
         </View>
 
@@ -658,6 +646,30 @@ const styles = StyleSheet.create({
     padding: 15,
     borderLeftWidth: 1,
     borderLeftColor: '#F0F0F0',
+  },
+  addressInput: {
+    flex: 0,
+    borderWidth: 1,
+    borderColor: '#DDD',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginTop: 6,
+  },
+  routeBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#EEF6EE',
+    padding: 10,
+    borderRadius: 8,
+    marginTop: 10,
+  },
+  routeText: {
+    flex: 1,
+    color: '#2E7D32',
+    fontSize: 13,
+    fontWeight: '600',
   },
   coordsText: {
     fontSize: 12,

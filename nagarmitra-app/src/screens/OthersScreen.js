@@ -8,7 +8,7 @@ import {
   Alert,
   Image,
 } from 'react-native';
-import { APP_VERSION, RELEASE_DATE, COPYRIGHT_YEAR } from '../appInfo';
+import { APP_VERSION } from '../appInfo';
 import { Ionicons } from '@expo/vector-icons';
 import { auth, signOut } from '../lib/firebase';
 import AsyncStorage from '@react-native-async-storage/async-storage';

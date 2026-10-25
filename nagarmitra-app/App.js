@@ -1,5 +1,5 @@
 import React from 'react';
-import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
+import { NavigationContainer, DefaultTheme, createNavigationContainerRef } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { Text, View, ScrollView, Image, TouchableOpacity, StyleSheet, Dimensions, ActivityIndicator, RefreshControl } from 'react-native';
@@ -24,8 +24,17 @@ import { auth, onAuthStateChanged, signOut } from './src/lib/firebase';
 import BotpressWidget from './src/components/BotpressWidget';
 import ErrorBoundary, { withErrorBoundary } from './src/components/ErrorBoundary';
 import { complaintAPI } from './src/api/client';
+import { SessionProvider, useSession } from './src/context/SessionContext';
+import NotificationBell from './src/components/NotificationBell';
+import ComplaintDetailScreen from './src/screens/ComplaintDetailScreen';
+import WorkQueueScreen from './src/screens/WorkQueueScreen';
+import AdminScreen from './src/screens/AdminScreen';
+import AdminUsersScreen from './src/screens/AdminUsersScreen';
+import { setupNotifications, showLocalAlert, onNotificationTap } from './src/services/notificationService';
 
 const Tab = createBottomTabNavigator();
+const RootStack = createNativeStackNavigator();
+const navigationRef = createNavigationContainerRef();
 const Stack = createNativeStackNavigator();
 
 const formatAgo = (date) => {
@@ -108,12 +117,15 @@ const HomeScreen = ({ navigation }) => {
           />
           <Text style={homeStyles.logoText}>NagarMitra</Text>
         </View>
-        <TouchableOpacity 
-          style={homeStyles.profileButton}
-          onPress={() => navigation.navigate('Profile')}
-        >
-          <Ionicons name="person-circle" size={32} color="#FF4500" />
-        </TouchableOpacity>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <NotificationBell />
+          <TouchableOpacity
+            style={homeStyles.profileButton}
+            onPress={() => navigation.navigate('Profile')}
+          >
+            <Ionicons name="person-circle" size={32} color="#FF4500" />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <View style={homeStyles.locationSection}>
@@ -255,7 +267,72 @@ const Safe = {
   FAQScreen: withErrorBoundary(FAQScreen),
   SettingsScreen: withErrorBoundary(SettingsScreen),
   FeedbackScreen: withErrorBoundary(FeedbackScreen),
+  ComplaintDetailScreen: withErrorBoundary(ComplaintDetailScreen),
+  WorkQueueScreen: withErrorBoundary(WorkQueueScreen),
+  AdminScreen: withErrorBoundary(AdminScreen),
+  AdminUsersScreen: withErrorBoundary(AdminUsersScreen),
 };
+
+const TAB_ICONS = {
+  Home: 'home',
+  Dashboard: 'stats-chart',
+  Raise: 'add-circle',
+  Community: 'people',
+  Others: 'menu',
+  Work: 'briefcase',
+  Admin: 'shield-checkmark',
+};
+
+// Each role gets the tabs it needs: citizens report, officers work, admins oversee.
+function MainTabs() {
+  const { role, isAdmin, unreadCount, ready } = useSession();
+  // Wait for the role so the tabs don't switch under the user's finger
+  if (!ready) {
+    return (
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFF' }}>
+        <ActivityIndicator size="large" color="#FF4500" />
+      </View>
+    );
+  }
+  return (
+    <Tab.Navigator
+      screenOptions={({ route }) => ({
+        headerShown: false,
+        tabBarIcon: ({ color, size, focused }) => (
+          <Ionicons name={focused ? TAB_ICONS[route.name] : `${TAB_ICONS[route.name]}-outline`} size={size} color={color} />
+        ),
+        tabBarActiveTintColor: '#FF4500',
+        tabBarInactiveTintColor: '#666',
+      })}
+    >
+      {isAdmin && <Tab.Screen name="Admin" component={Safe.AdminScreen} />}
+      {role !== 'citizen' && (
+        <Tab.Screen name="Work" component={Safe.WorkQueueScreen} options={{ title: isAdmin ? 'Complaints' : 'Work Queue' }} />
+      )}
+      {role === 'citizen' && <Tab.Screen name="Home" component={HomeStack} />}
+      <Tab.Screen name="Dashboard" component={Safe.DashboardScreen} />
+      {role === 'citizen' && <Tab.Screen name="Raise" component={Safe.RaiseScreen} />}
+      <Tab.Screen name="Community" component={Safe.CommunityScreen} />
+      <Tab.Screen
+        name="Others"
+        component={OthersStack}
+        options={{ tabBarBadge: unreadCount > 0 ? unreadCount : undefined, title: 'More' }}
+      />
+    </Tab.Navigator>
+  );
+}
+
+function SignedInApp() {
+  return (
+    <RootStack.Navigator screenOptions={{ headerShown: false }}>
+      <RootStack.Screen name="Main" component={MainTabs} />
+      <RootStack.Screen name="ComplaintDetail" component={Safe.ComplaintDetailScreen} />
+      <RootStack.Screen name="Inbox" component={Safe.NotificationsScreen} />
+      <RootStack.Screen name="AdminQueue" component={Safe.WorkQueueScreen} />
+      <RootStack.Screen name="AdminUsers" component={Safe.AdminUsersScreen} />
+    </RootStack.Navigator>
+  );
+}
 
 // Stack Navigator for Others section
 const OthersStack = () => (
@@ -325,6 +402,14 @@ export default function App() {
     });
     return () => unsub();
   }, []);
+  React.useEffect(() => {
+    if (!user) return undefined;
+    setupNotifications();
+    return onNotificationTap((id) => {
+      if (navigationRef.isReady()) navigationRef.navigate('ComplaintDetail', { id });
+    });
+  }, [user]);
+
   const theme = {
     ...DefaultTheme,
     colors: {
@@ -351,37 +436,18 @@ export default function App() {
       <StatusBar style="dark" />
       <SafeAreaView style={{ flex: 1, backgroundColor: '#FFF' }} edges={['top', 'left', 'right']}>
         <ErrorBoundary>
-          <NavigationContainer theme={theme}>
+          <SessionProvider firebaseUser={user} onNewNotifications={showLocalAlert}>
+          <NavigationContainer theme={theme} ref={navigationRef}>
             {showOnboarding ? (
               <OnboardingScreen onDone={completeOnboarding} />
             ) : !user ? (
               <AuthScreen />
             ) : (
-              <Tab.Navigator
-                screenOptions={({ route }) => ({
-                  headerShown: false,
-                  tabBarIcon: ({ color, size, focused }) => {
-                    let icon = 'ellipse';
-                    if (route.name === 'Home') icon = focused ? 'home' : 'home-outline';
-                    else if (route.name === 'Dashboard') icon = focused ? 'stats-chart' : 'stats-chart-outline';
-                    else if (route.name === 'Raise') icon = focused ? 'add-circle' : 'add-circle-outline';
-                    else if (route.name === 'Community') icon = focused ? 'people' : 'people-outline';
-                    else if (route.name === 'Others') icon = focused ? 'menu' : 'menu-outline';
-                    return <Ionicons name={icon} size={size} color={color} />;
-                  },
-                  tabBarActiveTintColor: '#FF4500',
-                  tabBarInactiveTintColor: '#666',
-                })}
-              >
-                <Tab.Screen name="Home" component={HomeStack} />
-                <Tab.Screen name="Dashboard" component={Safe.DashboardScreen} />
-                <Tab.Screen name="Raise" component={Safe.RaiseScreen} />
-                <Tab.Screen name="Community" component={Safe.CommunityScreen} />
-                <Tab.Screen name="Others" component={OthersStack} />
-              </Tab.Navigator>
+              <SignedInApp />
             )}
           </NavigationContainer>
           {user && <BotpressWidget />}
+          </SessionProvider>
         </ErrorBoundary>
       </SafeAreaView>
     </SafeAreaProvider>

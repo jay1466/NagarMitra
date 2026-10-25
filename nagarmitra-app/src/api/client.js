@@ -100,6 +100,7 @@ export const userAPI = {
   getNotifications: (params) => apiGet(`/api/v1/users/me/notifications${qs(params)}`),
   markNotificationRead: (id) => apiPut(`/api/v1/users/me/notifications/${id}/read`),
   markAllNotificationsRead: () => apiPut('/api/v1/users/me/notifications/read-all'),
+  setPushToken: (token) => apiPut('/api/v1/users/me/push-token', { token }),
 };
 
 // Community API functions
@@ -137,6 +138,26 @@ export const complaintAPI = {
   addNote: (id, note) => apiPost(`/api/v1/complaints/${id}/notes`, { note }),
   updateStatus: (id, status, reason, notes) =>
     apiPut(`/api/v1/complaints/${id}/status`, { status, reason, notes }),
+};
+
+export const metaAPI = {
+  get: () => apiGet('/api/v1/meta'),
+};
+
+export const workflowAPI = {
+  setStatus: (id, status, note, photo) => apiPost(`/api/v1/complaints/${id}/status`, { status, note, photo }),
+  assign: (id, officerId) => apiPost(`/api/v1/complaints/${id}/assign`, { officerId }),
+  confirm: (id, rating) => apiPost(`/api/v1/complaints/${id}/confirm`, { rating }),
+  reopen: (id, reason) => apiPost(`/api/v1/complaints/${id}/reopen`, { reason }),
+  nudge: (id) => apiPost(`/api/v1/complaints/${id}/nudge`),
+};
+
+export const adminAPI = {
+  overview: () => apiGet('/api/v1/admin/overview'),
+  users: (params) => apiGet(`/api/v1/admin/users${qs(params)}`),
+  updateUser: (id, data) => apiPut(`/api/v1/admin/users/${id}`, data),
+  createUser: (data) => apiPost('/api/v1/admin/users', data),
+  runSlaSweep: () => apiPost('/api/v1/admin/sla-sweep'),
 };
 
 export const feedbackAPI = {

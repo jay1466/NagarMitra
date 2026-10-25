@@ -46,3 +46,47 @@ export function optionalFirebaseAuth() {
     next();
   };
 }
+
+// Verified login + the matching NagarMitra user record (created on first use) as req.me.
+export function requireUser() {
+  const verify = requireFirebaseAuth({ requireVerified: false });
+  return (req, res, next) =>
+    verify(req, res, async () => {
+      try {
+        const { default: User } = await import('../models/User.js');
+        let me = await User.findByFirebaseUid(req.user.uid);
+        if (!me) me = await User.createFromFirebaseUser(req.user);
+        if (!me.isActive) return res.status(403).json({ error: 'This account has been deactivated' });
+        req.me = me;
+        next();
+      } catch (err) {
+        next(err);
+      }
+    });
+}
+
+// Like requireUser, but anonymous requests are allowed (req.me stays undefined).
+export function optionalUser() {
+  const attach = optionalFirebaseAuth();
+  return (req, res, next) =>
+    attach(req, res, async () => {
+      try {
+        if (req.user?.uid) {
+          const { default: User } = await import('../models/User.js');
+          req.me = (await User.findByFirebaseUid(req.user.uid)) || undefined;
+        }
+        next();
+      } catch (err) {
+        next(err);
+      }
+    });
+}
+
+export function requireRole(...roles) {
+  return (req, res, next) => {
+    if (!req.me || !roles.includes(req.me.role)) {
+      return res.status(403).json({ error: 'You do not have permission to do this' });
+    }
+    next();
+  };
+}

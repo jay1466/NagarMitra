@@ -11,8 +11,10 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { userAPI, errorMessage } from '../api/client';
+import { useSession } from '../context/SessionContext';
 
 const NotificationsScreen = ({ navigation }) => {
+  const { refreshUnread } = useSession();
   const [notifications, setNotifications] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
   const [filter, setFilter] = useState('all'); // all, confirmed, acknowledged, resolved
@@ -27,16 +29,21 @@ const NotificationsScreen = ({ navigation }) => {
     complaint_acknowledged: 'acknowledged',
     complaint_in_progress: 'acknowledged',
     complaint_reminder: 'acknowledged',
+    complaint_escalated: 'acknowledged',
+    complaint_nudge: 'acknowledged',
+    complaint_reopened: 'acknowledged',
+    complaint_closed: 'resolved',
     complaint_resolved: 'resolved',
     complaint_rejected: 'resolved',
   };
 
   const toItem = (n) => ({
     id: n._id,
-    type: TAB_FOR_TYPE[n.type] || 'other',
+    type: n.type === 'complaint_escalated' ? 'escalated' : TAB_FOR_TYPE[n.type] || 'other',
     title: n.title,
     message: n.body,
     reportId: n.data?.reportId || n.relatedComplaint?.reportId || '',
+    complaintId: n.relatedComplaint?._id || n.relatedComplaint || null,
     timestamp: new Date(n.createdAt),
     read: !!n.interaction?.isRead,
   });
@@ -66,13 +73,14 @@ const NotificationsScreen = ({ navigation }) => {
   const openNotification = (item) => {
     if (!item.read) {
       setNotifications((prev) => prev.map((n) => (n.id === item.id ? { ...n, read: true } : n)));
-      userAPI.markNotificationRead(item.id).catch(() => {});
+      userAPI.markNotificationRead(item.id).then(refreshUnread).catch(() => {});
     }
+    if (item.complaintId) navigation.navigate('ComplaintDetail', { id: String(item.complaintId) });
   };
 
   const markAllRead = () => {
     setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
-    userAPI.markAllNotificationsRead().catch(() => {});
+    userAPI.markAllNotificationsRead().then(refreshUnread).catch(() => {});
   };
 
   const getNotificationIcon = (type) => {
@@ -83,6 +91,8 @@ const NotificationsScreen = ({ navigation }) => {
         return { name: 'time', color: '#FFC107' };
       case 'resolved':
         return { name: 'checkmark-done-circle', color: '#17A2B8' };
+      case 'escalated':
+        return { name: 'alert-circle', color: '#C62828' };
       default:
         return { name: 'notifications', color: '#FF4500' };
     }
@@ -116,7 +126,8 @@ const NotificationsScreen = ({ navigation }) => {
   const filterButtons = [
     { key: 'all', label: 'All', count: notifications.length },
     { key: 'confirmed', label: 'Confirmed', count: notifications.filter(n => n.type === 'confirmed').length },
-    { key: 'acknowledged', label: 'Reviewing', count: notifications.filter(n => n.type === 'acknowledged').length },
+    { key: 'acknowledged', label: 'In progress', count: notifications.filter(n => n.type === 'acknowledged').length },
+    { key: 'escalated', label: 'Escalated', count: notifications.filter(n => n.type === 'escalated').length },
     { key: 'resolved', label: 'Resolved', count: notifications.filter(n => n.type === 'resolved').length },
   ];
 

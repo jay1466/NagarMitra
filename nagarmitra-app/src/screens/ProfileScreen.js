@@ -12,17 +12,18 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
-import * as Location from 'expo-location';
 import { auth, updateProfile } from '../lib/firebase';
 import { userAPI, errorMessage } from '../api/client';
 import { toCompressedDataUri } from '../utils/image';
+import LocationPicker from '../components/LocationPicker';
+import { useSession, roleLabel, jurisdictionLabel } from '../context/SessionContext';
 
 const emptyProfile = () => ({
   displayName: auth.currentUser?.displayName || '',
   email: auth.currentUser?.email || '',
   phone: '',
   photoURL: null,
-  location: { city: '', ward: '', address: '' },
+  location: { state: null, district: null, address: '' },
 });
 
 const fromServer = (u) => ({
@@ -31,13 +32,15 @@ const fromServer = (u) => ({
   phone: u?.phoneNumber || '',
   photoURL: u?.photoURL || null,
   location: {
-    city: u?.profile?.city || '',
-    ward: u?.profile?.wardCode || '',
+    state: u?.state || null,
+    district: u?.district || null,
     address: u?.profile?.address || '',
   },
 });
 
 const ProfileScreen = ({ navigation }) => {
+  const { me, meta, refreshMe } = useSession();
+  const isCitizen = !me || me.role === 'citizen';
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
@@ -58,33 +61,6 @@ const ProfileScreen = ({ navigation }) => {
   }, []);
 
   useEffect(() => { loadProfile(); }, [loadProfile]);
-
-  const getCurrentLocation = async () => {
-    try {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') {
-        Alert.alert('Permission needed', 'Please allow location access to fill in your address.');
-        return;
-      }
-      const location = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
-      const [address] = await Location.reverseGeocodeAsync({
-        latitude: location.coords.latitude,
-        longitude: location.coords.longitude,
-      });
-      if (address) {
-        setProfileData((prev) => ({
-          ...prev,
-          location: {
-            ...prev.location,
-            city: address.city || prev.location.city,
-            address: [address.name, address.street, address.district].filter(Boolean).join(', '),
-          },
-        }));
-      }
-    } catch {
-      Alert.alert('Location error', 'Could not get your location. Make sure GPS is on.');
-    }
-  };
 
   const handleImagePicker = async () => {
     try {
@@ -126,12 +102,12 @@ const ProfileScreen = ({ navigation }) => {
         displayName: name,
         phoneNumber: phone,
         photoURL: profileData.photoURL,
-        profile: {
-          city: profileData.location.city.trim(),
-          wardCode: profileData.location.ward.trim(),
-          address: profileData.location.address.trim(),
-        },
+        profile: { address: profileData.location.address.trim() },
+        ...(isCitizen && profileData.location.state && profileData.location.district
+          ? { state: profileData.location.state, district: profileData.location.district }
+          : {}),
       });
+      refreshMe();
       // Keep the Firebase display name in sync (photos live on our server, not in Firebase)
       await updateProfile(auth.currentUser, { displayName: name }).catch(() => {});
       const p = fromServer(res.user);
@@ -242,61 +218,54 @@ const ProfileScreen = ({ navigation }) => {
 
         {/* Location Section */}
         <View style={styles.sectionContainer}>
-          <Text style={styles.sectionTitle}>Location Information</Text>
-          
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>City</Text>
-            <TextInput
-            placeholderTextColor="#9A9A9A"
-              style={[styles.input, isEditing && styles.inputEditable]}
-              value={profileData.location.city}
-              onChangeText={(text) => setProfileData(prev => ({
-                ...prev,
-                location: { ...prev.location, city: text }
-              }))}
-              placeholder="Enter your city"
-              editable={isEditing}
-            />
-          </View>
+          <Text style={styles.sectionTitle}>{isCitizen ? 'Home location' : 'Role & jurisdiction'}</Text>
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Ward</Text>
-            <TextInput
-            placeholderTextColor="#9A9A9A"
-              style={[styles.input, isEditing && styles.inputEditable]}
-              value={profileData.location.ward}
-              onChangeText={(text) => setProfileData(prev => ({
-                ...prev,
-                location: { ...prev.location, ward: text }
-              }))}
-              placeholder="e.g. Ward 12"
-              editable={isEditing}
-            />
-          </View>
+          {!isCitizen && (
+            <View style={styles.roleBox}>
+              <Ionicons name="shield-checkmark" size={20} color="#FF4500" />
+              <View style={{ flex: 1, marginLeft: 10 }}>
+                <Text style={styles.roleTitle}>{roleLabel(meta, me?.role)}</Text>
+                <Text style={styles.roleSub}>{me?.designation ? `${me.designation} · ` : ''}{jurisdictionLabel(meta, me)}</Text>
+              </View>
+            </View>
+          )}
+
+          {isCitizen && (
+            <View style={styles.inputGroup}>
+              <LocationPicker
+                label="State & district"
+                value={profileData.location}
+                disabled={!isEditing}
+                allowDetect={isEditing}
+                onChange={(p) =>
+                  setProfileData((prev) => ({
+                    ...prev,
+                    location: {
+                      ...prev.location,
+                      state: p.state,
+                      district: p.district,
+                      address: p.address && !prev.location.address ? p.address : prev.location.address,
+                    },
+                  }))
+                }
+              />
+              <Text style={styles.helpText}>New complaints will default to this district.</Text>
+            </View>
+          )}
 
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Address</Text>
             <TextInput
-            placeholderTextColor="#9A9A9A"
+              placeholderTextColor="#9A9A9A"
               style={[styles.input, isEditing && styles.inputEditable]}
               value={profileData.location.address}
-              onChangeText={(text) => setProfileData(prev => ({
-                ...prev,
-                location: { ...prev.location, address: text }
-              }))}
-              placeholder="Enter your address"
+              onChangeText={(text) => setProfileData((prev) => ({ ...prev, location: { ...prev.location, address: text } }))}
+              placeholder="House, street, area"
               multiline
               numberOfLines={2}
               editable={isEditing}
             />
           </View>
-
-          {isEditing && (
-            <TouchableOpacity style={styles.locationButton} onPress={getCurrentLocation}>
-              <Ionicons name="location" size={16} color="#FF4500" />
-              <Text style={styles.locationButtonText}>Use Current Location</Text>
-            </TouchableOpacity>
-          )}
         </View>
 
         {/* Action Buttons */}
@@ -325,6 +294,16 @@ const ProfileScreen = ({ navigation }) => {
 };
 
 const styles = StyleSheet.create({
+  roleBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFF1EA',
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 14,
+  },
+  roleTitle: { fontSize: 15, fontWeight: 'bold', color: '#222' },
+  roleSub: { fontSize: 13, color: '#666', marginTop: 2 },
   container: {
     flex: 1,
     backgroundColor: '#FFF',

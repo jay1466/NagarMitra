@@ -8,6 +8,21 @@ const UserSchema = new mongoose.Schema(
     phoneNumber: { type: String },
     photoURL: { type: String },
     
+    // Access control (jurisdiction hierarchy):
+    //   super_admin: all of India · state_admin: one state · district_admin: one district
+    //   officer: one department in one district · citizen: reports issues
+    role: {
+      type: String,
+      enum: ['super_admin', 'state_admin', 'district_admin', 'officer', 'citizen'],
+      default: 'citizen',
+      index: true,
+    },
+    state: { type: String }, // state code, e.g. 'GJ' (jurisdiction for staff, home for citizens)
+    district: { type: String }, // district code, e.g. 'anand'
+    department: { type: String }, // officers only, e.g. 'roads'
+    designation: { type: String }, // e.g. 'Assistant Engineer'
+    expoPushToken: { type: String },
+
     // Profile information
     profile: {
       firstName: { type: String },
@@ -44,7 +59,7 @@ const UserSchema = new mongoose.Schema(
     // Location for location-based features
     location: {
       type: { type: String, enum: ['Point'] },
-      coordinates: { type: [Number], index: '2dsphere' }, // [lng, lat]
+      coordinates: { type: [Number], default: undefined, index: '2dsphere' }, // [lng, lat]
     },
   },
   { timestamps: true }
@@ -52,6 +67,7 @@ const UserSchema = new mongoose.Schema(
 
 // Create indexes
 UserSchema.index({ 'profile.wardCode': 1 });
+UserSchema.index({ role: 1, state: 1, district: 1, department: 1 });
 UserSchema.index({ 'profile.city': 1 });
 UserSchema.index({ location: '2dsphere' });
 

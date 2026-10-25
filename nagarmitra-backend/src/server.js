@@ -83,10 +83,16 @@ async function start() {
       initTelegramBot();
     });
 
-    // Handle unhandled promise rejections
+    // SLA reminders/escalations every 15 minutes while the server is awake
+    // (an external cron hitting /api/v1/jobs/sla-sweep covers sleeping periods)
+    const { slaSweep } = await import('./services/workflow.js');
+    const runSweep = () => slaSweep().catch((err) => logger.error('SLA sweep failed', { message: err.message }));
+    setTimeout(runSweep, 30 * 1000);
+    setInterval(runSweep, 15 * 60 * 1000);
+
+    // A stray rejected promise should be logged, not take the whole API down
     process.on('unhandledRejection', (err) => {
-      logger.error(`Unhandled Rejection: ${err.message}`);
-      server.close(() => process.exit(1));
+      logger.error(`Unhandled Rejection: ${err?.message || err}`, { stack: err?.stack });
     });
 
     // Handle uncaught exceptions

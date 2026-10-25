@@ -4,6 +4,10 @@
 
 Based on the original NagarMitra project by Team ParaX (Aryan Rana, Prachi Khatri, Satakshi Roy, Diptanshu Vishwa): https://github.com/DiptanshuVishwa/NagarMitra
 
+## 🔑 Demo accounts
+
+Run `npm run seed:demo` in `nagarmitra-backend` (with `DEMO_PASSWORD` set in `.env`) to create a full India-wide set of demo accounts: one super admin, a master admin per state, an admin and five department officers per district, and a citizen per district. Logins are not published in this repository.
+
 ---
 
 ## ❗ Problem Statement

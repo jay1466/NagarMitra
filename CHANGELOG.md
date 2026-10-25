@@ -1,5 +1,26 @@
 # Changelog
 
+## v1.2.0 — 2026-10-25
+
+### Added — production complaint workflow (modelled on CPGRAMS / Swachhata / FixMyStreet)
+- **India-wide hierarchy**: Super Admin (India) → State Master Admin (36 states/UTs) → District Admin (784 districts) → Department Officers → Citizens.
+- **Auto-routing**: each complaint goes to the officer of the matching department (Roads, Sanitation, Water, Electricity, General) in its district, least-loaded first. Other officers cannot see it.
+- **Jurisdiction-scoped access**: officers see their department in their district; district/state admins see their area; the super admin sees everything.
+- **Deadlines (SLAs)** per category and priority, with an **escalation ladder**: officer reminder → District Admin (+24h) → State Admin (+3 days) → Super Admin (+7 days). Runs every 15 minutes and via `/api/v1/jobs/sla-sweep` for an external cron.
+- **Status workflow**: submitted → assigned → acknowledged → in progress → resolved (with proof photo) → closed by the citizen (with rating), or reopened within 7 days; rejecting requires a reason. Resolved complaints auto-close after 7 days.
+- Citizens can **remind the officer** (once per 24h).
+- **Notifications** for every step (in-app inbox, unread badges, local alerts; push-ready via Expo).
+- **Complaint detail** screen with photos, map, officer, deadline, timeline and role-specific actions.
+- **Officer Work Queue** and **Admin panel** (totals, overdue, escalated, unassigned, breakdown by state/district/department, officer performance).
+- **Manage people**: admins create accounts and assign roles strictly below their own, within their jurisdiction.
+- **State → District dropdowns** everywhere (bundled list of 36 states/UTs and 784 districts), auto-filled from GPS when possible.
+- Demo seeder (`npm run seed:demo`, password from `DEMO_PASSWORD` in `.env`).
+
+### Fixed
+- Empty GeoJSON `coordinates` default broke user upserts.
+- Any unhandled promise rejection used to shut the whole API down.
+- Any logged-in user could search all users by email (with unescaped regex).
+
 ## v1.1.0 — 2026-10-25
 
 ### Fixed

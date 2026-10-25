@@ -5,6 +5,9 @@ import * as Location from 'expo-location';
 import { useFocusEffect } from '@react-navigation/native';
 import { complaintAPI, errorMessage } from '../api/client';
 import IssueMap from '../components/IssueMap';
+import ComplaintCard from '../components/ComplaintCard';
+import { useSession } from '../context/SessionContext';
+import { placeLabel } from '../data/india';
 
 // Status color mapping
 const getStatusColor = (status) => {
@@ -22,6 +25,9 @@ const STATUS_LABELS = {
   acknowledged: 'Acknowledged',
   in_progress: 'In Progress',
   resolved: 'Resolved',
+  closed: 'Closed',
+  done: 'Resolved',
+  assigned: 'Assigned',
   rejected: 'Rejected',
 };
 const statusLabel = (s) => STATUS_LABELS[s] || s || 'Unknown';
@@ -60,7 +66,15 @@ const formatDate = (d) => {
   return Number.isNaN(date.getTime()) ? '' : date.toLocaleDateString();
 };
 
-export default function DashboardScreen() {
+export default function DashboardScreen({ navigation }) {
+  const { me } = useSession();
+  // Public view defaults to the user's own district when we know it
+  const [area, setArea] = useState(me?.district ? 'district' : 'india'); // 'district' | 'state' | 'india'
+  const areaParams = area === 'district' && me?.district
+    ? { state: me.state, district: me.district }
+    : area === 'state' && me?.state
+      ? { state: me.state }
+      : {};
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(false);
   const [listError, setListError] = useState('');
@@ -98,6 +112,7 @@ export default function DashboardScreen() {
         mine: onlyMine ? 1 : undefined,
         status: statusFilter || undefined,
         limit: 50,
+        ...(onlyMine ? {} : areaParams),
       });
       setItems(Array.isArray(json.items) ? json.items : []);
     } catch (e) {
@@ -106,16 +121,16 @@ export default function DashboardScreen() {
     } finally {
       setLoading(false);
     }
-  }, [onlyMine, statusFilter]);
+  }, [onlyMine, statusFilter, area, me?.state, me?.district]);
 
   const loadCounts = useCallback(async () => {
     // Each count is independent so one failure doesn't blank the others
     const total = (p) => p.then((r) => r.total || 0).catch(() => null);
     const [all, mine, resolved, inProgress] = await Promise.all([
-      total(complaintAPI.getList({ limit: 1 })),
+      total(complaintAPI.getList({ limit: 1, ...areaParams })),
       total(complaintAPI.getList({ mine: 1, limit: 1 })),
-      total(complaintAPI.getList({ status: 'resolved', limit: 1 })),
-      total(complaintAPI.getList({ status: 'in_progress', limit: 1 })),
+      total(complaintAPI.getList({ status: 'done', limit: 1, ...areaParams })),
+      total(complaintAPI.getList({ status: 'in_progress', limit: 1, ...areaParams })),
     ]);
     setCounts((prev) => ({
       all: all ?? prev.all,
@@ -123,7 +138,7 @@ export default function DashboardScreen() {
       resolved: resolved ?? prev.resolved,
       inProgress: inProgress ?? prev.inProgress,
     }));
-  }, []);
+  }, [area, me?.state, me?.district]);
 
   // Reload whenever the filters change
   useEffect(() => { loadList(); }, [loadList]);
@@ -157,13 +172,18 @@ export default function DashboardScreen() {
   const checkByReport = async () => {
     const id = reportId.trim();
     if (!id) {
-      setLookup({ error: 'Enter a report ID, e.g. NM-W-01-20261025-0001' });
+      setLookup({ error: 'Enter a report ID, e.g. NM-GJ-20261025-0001' });
       return;
     }
     setLookingUp(true);
     try {
       const json = await complaintAPI.getByReportId(id);
-      setLookup(json.complaint || { error: 'No report found with this ID' });
+      if (json.complaint?._id) {
+        setLookup(null);
+        navigation.navigate('ComplaintDetail', { id: json.complaint._id });
+      } else {
+        setLookup({ error: 'No report found with this ID' });
+      }
     } catch (e) {
       setLookup({ error: errorMessage(e, 'Could not look up this report.') });
     } finally {
@@ -192,6 +212,21 @@ export default function DashboardScreen() {
           </TouchableOpacity>
         </View>
 
+        {/* Area switch */}
+        {me?.state && (
+          <View style={styles.areaRow}>
+            {[
+              ...(me.district ? [['district', placeLabel(me.state, me.district).split(',')[0]]] : []),
+              ['state', placeLabel(me.state)],
+              ['india', 'All India'],
+            ].map(([key, label]) => (
+              <TouchableOpacity key={key} onPress={() => setArea(key)} style={[styles.areaChip, area === key && styles.areaChipActive]}>
+                <Text style={[styles.areaText, area === key && styles.areaTextActive]} numberOfLines={1}>{label}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
+
         {/* Statistics Tiles */}
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.statsContainer}>
           <StatsTile title="All Issues" count={counts.all} icon="apps" color="#666"
@@ -199,7 +234,7 @@ export default function DashboardScreen() {
           <StatsTile title="My Reports" count={counts.mine} icon="person" color="#007BFF"
             active={onlyMine} onPress={() => selectFilter(true, '')} />
           <StatsTile title="Resolved" count={counts.resolved} icon="checkmark-circle" color="#28A745"
-            active={statusFilter === 'resolved'} onPress={() => selectFilter(false, 'resolved')} />
+            active={statusFilter === 'done'} onPress={() => selectFilter(false, 'done')} />
           <StatsTile title="In Progress" count={counts.inProgress} icon="construct" color="#FFC107"
             active={statusFilter === 'in_progress'} onPress={() => selectFilter(false, 'in_progress')} />
         </ScrollView>
@@ -242,7 +277,7 @@ export default function DashboardScreen() {
             <TextInput
               value={reportId}
               onChangeText={(t) => { setReportId(t); if (lookup) setLookup(null); }}
-              placeholder="Enter Report ID (e.g. NM-W-01-20261025-0001)"
+              placeholder="Report ID, e.g. NM-GJ-20261025-0001"
               style={styles.searchInput}
               placeholderTextColor="#999"
               autoCapitalize="characters"
@@ -317,30 +352,11 @@ export default function DashboardScreen() {
             </View>
           ) : (
             items.slice(0, 30).map((item) => (
-              <View key={item._id} style={styles.issueCard}>
-                <View style={styles.issueHeader}>
-                  <View style={styles.issueIcon}>
-                    <Ionicons name={getCategoryIcon(item.category)} size={20} color="#FF4500" />
-                  </View>
-                  <View style={styles.issueInfo}>
-                    <Text style={styles.issueTitle}>{item.category}</Text>
-                    <Text style={styles.issueDate}>{formatDate(item.createdAt)}</Text>
-                  </View>
-                  <View style={[styles.issueStatus, { backgroundColor: getStatusColor(item.status) }]}>
-                    <Text style={styles.issueStatusText}>{statusLabel(item.status)}</Text>
-                  </View>
-                </View>
-                <Text style={styles.issueDescription} numberOfLines={2}>{item.description || ''}</Text>
-                <View style={styles.issueFooter}>
-                  <Text style={styles.issueId} selectable>ID: {item.reportId}</Text>
-                  <View style={styles.locationInfo}>
-                    <Ionicons name="location" size={12} color="#666" />
-                    <Text style={styles.locationText} numberOfLines={1}>
-                      {item.address || (coordsOf(item) ? 'GPS location' : 'No location')}
-                    </Text>
-                  </View>
-                </View>
-              </View>
+              <ComplaintCard
+                key={item._id}
+                item={item}
+                onPress={() => navigation.navigate('ComplaintDetail', { id: item._id })}
+              />
             ))
           )}
         </View>
@@ -355,6 +371,33 @@ export default function DashboardScreen() {
 }
 
 const styles = StyleSheet.create({
+  areaRow: {
+    flexDirection: 'row',
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    backgroundColor: '#FFF'
+  },
+  areaChip: {
+    flexShrink: 1,
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: '#E0E0E0'
+  },
+  areaChipActive: {
+    backgroundColor: '#FF4500',
+    borderColor: '#FF4500'
+  },
+  areaText: {
+    fontSize: 13,
+    color: '#555',
+    fontWeight: '600'
+  },
+  areaTextActive: {
+    color: '#FFF'
+  },
   container: {
     flex: 1,
     backgroundColor: '#F8F9FA'
