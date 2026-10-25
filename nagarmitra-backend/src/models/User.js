@@ -22,6 +22,7 @@ const UserSchema = new mongoose.Schema(
     department: { type: String }, // officers only, e.g. 'roads'
     designation: { type: String }, // e.g. 'Assistant Engineer'
     expoPushToken: { type: String },
+    fcmToken: { type: String }, // native Firebase Cloud Messaging token of the user's phone
 
     // Profile information
     profile: {

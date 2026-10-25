@@ -432,16 +432,23 @@ router.get('/:userId', async (req, res) => {
   }
 });
 
-// Register this phone for push notifications (Expo push token)
+// Register this phone for push notifications: { token, type: 'fcm' | 'expo' }. Empty token unregisters.
 router.put('/me/push-token', requireFirebaseAuth({ requireVerified: false }), async (req, res) => {
   try {
-    const token = String(req.body?.token || '');
-    if (token && !/^Expo(nent)?PushToken\[[^\]]+\]$/.test(token)) {
+    const token = String(req.body?.token || '').trim();
+    const type = req.body?.type === 'expo' ? 'expo' : 'fcm';
+    if (token.length > 4096) return res.status(400).json({ error: 'Invalid push token' });
+    if (type === 'expo' && token && !/^Expo(nent)?PushToken\[[^\]]+\]$/.test(token)) {
       return res.status(400).json({ error: 'Invalid push token' });
     }
     const user = await User.findByFirebaseUid(req.user.uid);
     if (!user) return res.status(404).json({ error: 'User not found' });
-    user.expoPushToken = token || undefined;
+    if (token) {
+      // A phone belongs to one account at a time (e.g. after switching demo logins)
+      await User.updateMany({ _id: { $ne: user._id }, [type === 'fcm' ? 'fcmToken' : 'expoPushToken']: token }, { $unset: { [type === 'fcm' ? 'fcmToken' : 'expoPushToken']: 1 } });
+    }
+    if (type === 'fcm') user.fcmToken = token || undefined;
+    else user.expoPushToken = token || undefined;
     await user.save();
     return res.json({ ok: true });
   } catch (err) {

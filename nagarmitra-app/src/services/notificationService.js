@@ -1,7 +1,6 @@
 import { Platform } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
-import Constants from 'expo-constants';
 import { userAPI } from '../api/client';
 
 // Show alerts even while the app is open
@@ -15,6 +14,8 @@ Notifications.setNotificationHandler({
 });
 
 let channelReady = false;
+// When real push works, the server's push is the alert; polling only updates badges
+let pushActive = false;
 async function ensureChannel() {
   if (channelReady || Platform.OS !== 'android') return;
   await Notifications.setNotificationChannelAsync('nagarmitra', {
@@ -27,26 +28,44 @@ async function ensureChannel() {
 }
 
 /**
- * Ask for notification permission and register this phone for push.
- * Push needs FCM credentials in the EAS build; without them we silently fall
- * back to in-app polling + local alerts, which always work.
+ * Ask for notification permission and register this phone's Firebase Cloud
+ * Messaging token so the server can push while the app is closed.
+ * Returns an unsubscribe function for token-refresh updates.
  */
 export async function setupNotifications() {
   try {
     await ensureChannel();
     const { status } = await Notifications.requestPermissionsAsync();
-    if (status !== 'granted' || !Device.isDevice) return false;
-    const projectId = Constants.expoConfig?.extra?.eas?.projectId;
-    const { data: token } = await Notifications.getExpoPushTokenAsync({ projectId });
-    if (token) await userAPI.setPushToken(token);
-    return true;
+    if (status !== 'granted' || !Device.isDevice || Platform.OS !== 'android') return () => {};
+    const { data: token } = await Notifications.getDevicePushTokenAsync();
+    if (token) {
+      await userAPI.setPushToken(token, 'fcm');
+      pushActive = true;
+    }
+    // Firebase rotates tokens occasionally; keep the server in sync
+    const sub = Notifications.addPushTokenListener(({ data }) => {
+      if (data) userAPI.setPushToken(data, 'fcm').catch(() => {});
+    });
+    return () => sub.remove();
   } catch {
-    return false;
+    // No FCM in this build (e.g. Expo Go): in-app polling + local alerts still work
+    return () => {};
+  }
+}
+
+/** Stop pushes to this phone (call before signing out). */
+export async function unregisterPush() {
+  pushActive = false;
+  try {
+    await userAPI.setPushToken('', 'fcm');
+  } catch {
+    // offline: the server prunes dead tokens on the next send
   }
 }
 
 /** Show a local alert for a notification the app just fetched from the server. */
 export async function showLocalAlert(notification, extraCount = 0) {
+  if (pushActive) return;
   try {
     await ensureChannel();
     await Notifications.scheduleNotificationAsync({

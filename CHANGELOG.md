@@ -1,5 +1,15 @@
 # Changelog
 
+## v1.2.1 — 2026-10-25
+
+### Added
+- **Push notifications while the app is closed**: the backend sends through Firebase Cloud Messaging directly (`firebase-admin`), with a dedicated Android channel. Dead tokens are pruned automatically; a phone is unregistered on logout.
+- Firebase Android config is supplied to EAS as the secret file variable `GOOGLE_SERVICES_JSON` (`app.config.js`), so it never enters the public repo.
+- External scheduler hook for SLA reminders while the free server sleeps: `POST /api/v1/jobs/sla-sweep` with header `x-cron-key` (set `CRON_KEY` on the server).
+
+### Changed
+- In-app polling no longer raises its own alert when real push is active (no duplicate alerts).
+
 ## v1.2.0 — 2026-10-25
 
 ### Added — production complaint workflow (modelled on CPGRAMS / Swachhata / FixMyStreet)

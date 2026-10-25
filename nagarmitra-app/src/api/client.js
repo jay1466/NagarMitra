@@ -100,7 +100,7 @@ export const userAPI = {
   getNotifications: (params) => apiGet(`/api/v1/users/me/notifications${qs(params)}`),
   markNotificationRead: (id) => apiPut(`/api/v1/users/me/notifications/${id}/read`),
   markAllNotificationsRead: () => apiPut('/api/v1/users/me/notifications/read-all'),
-  setPushToken: (token) => apiPut('/api/v1/users/me/push-token', { token }),
+  setPushToken: (token, type = 'fcm') => apiPut('/api/v1/users/me/push-token', { token, type }),
 };
 
 // Community API functions

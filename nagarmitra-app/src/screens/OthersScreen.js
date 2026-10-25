@@ -9,6 +9,7 @@ import {
   Image,
 } from 'react-native';
 import { APP_VERSION } from '../appInfo';
+import { unregisterPush } from '../services/notificationService';
 import { Ionicons } from '@expo/vector-icons';
 import { auth, signOut } from '../lib/firebase';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -28,6 +29,7 @@ const OthersScreen = ({ navigation }) => {
           style: 'destructive',
           onPress: async () => {
             try {
+              await unregisterPush();
               await signOut(auth);
               await AsyncStorage.removeItem('remember_me');
               // Navigation will be handled by App.js auth state listener

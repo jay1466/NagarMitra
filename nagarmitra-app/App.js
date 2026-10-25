@@ -404,10 +404,15 @@ export default function App() {
   }, []);
   React.useEffect(() => {
     if (!user) return undefined;
-    setupNotifications();
-    return onNotificationTap((id) => {
+    let stopTokenSync = () => {};
+    setupNotifications().then((stop) => { stopTokenSync = stop; });
+    const stopTaps = onNotificationTap((id) => {
       if (navigationRef.isReady()) navigationRef.navigate('ComplaintDetail', { id });
     });
+    return () => {
+      stopTokenSync();
+      stopTaps();
+    };
   }, [user]);
 
   const theme = {

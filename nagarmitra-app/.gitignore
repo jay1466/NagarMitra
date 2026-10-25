@@ -48,3 +48,6 @@ node_modules/
 
 nagarmitra-backend/src/config/vision-key.jsonnagarmitra-backend/src/config/vision-key.json
 nagarmitra-backend/src/config/vision-key.json
+
+# Firebase Android config: provided to EAS as the GOOGLE_SERVICES_JSON file variable
+google-services.json
