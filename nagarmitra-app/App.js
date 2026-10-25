@@ -1,8 +1,8 @@
 import React from 'react';
-import { NavigationContainer, DefaultTheme, createNavigationContainerRef } from '@react-navigation/native';
+import { NavigationContainer, DefaultTheme, DarkTheme, createNavigationContainerRef } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { Text, View, ScrollView, Image, TouchableOpacity, StyleSheet, Dimensions, ActivityIndicator, RefreshControl } from 'react-native';
+import { Text, View, ScrollView, Image, TouchableOpacity, StyleSheet, Dimensions, ActivityIndicator, RefreshControl, useColorScheme } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { useFocusEffect } from '@react-navigation/native';
@@ -33,6 +33,8 @@ import AdminUsersScreen from './src/screens/AdminUsersScreen';
 import { setupNotifications, showLocalAlert, onNotificationTap } from './src/services/notificationService';
 import { installGlobalErrorHandler } from './src/services/crashReporter';
 
+import { tc, tct, themedStyles, setScheme } from './src/theme';
+import { ThemeContext } from './src/context/ThemeContext';
 installGlobalErrorHandler();
 
 const Tab = createBottomTabNavigator();
@@ -59,9 +61,9 @@ const HomeScreen = ({ navigation }) => {
   const firstName = (auth.currentUser?.displayName || '').split(' ')[0];
 
   const slides = [
-    { id: 1, title: 'Building a Smarter City', icon: 'business', color: '#FF4500', description: 'Join citizens making their cities better' },
-    { id: 2, title: 'Your Voice, Your Community', icon: 'people', color: '#28A745', description: 'Every report makes a difference in your neighborhood' },
-    { id: 3, title: 'Resolve Issues Together', icon: 'checkmark-done', color: '#007BFF', description: 'See real results from your civic participation' },
+    { id: 1, title: 'Building a Smarter City', icon: 'business', color: tct('#FF4500'), description: 'Join citizens making their cities better' },
+    { id: 2, title: 'Your Voice, Your Community', icon: 'people', color: tct('#28A745'), description: 'Every report makes a difference in your neighborhood' },
+    { id: 3, title: 'Resolve Issues Together', icon: 'checkmark-done', color: tct('#007BFF'), description: 'See real results from your civic participation' },
   ];
 
   React.useEffect(() => {
@@ -108,7 +110,7 @@ const HomeScreen = ({ navigation }) => {
     <ScrollView
       style={homeStyles.container}
       showsVerticalScrollIndicator={false}
-      refreshControl={<RefreshControl refreshing={loadingStats && !!stats} onRefresh={loadStats} colors={['#FF4500']} />}
+      refreshControl={<RefreshControl refreshing={loadingStats && !!stats} onRefresh={loadStats} colors={[tc('#FF4500')]} />}
     >
       {/* Header */}
       <View style={homeStyles.header}>
@@ -126,13 +128,13 @@ const HomeScreen = ({ navigation }) => {
             style={homeStyles.profileButton}
             onPress={() => navigation.navigate('Profile')}
           >
-            <Ionicons name="person-circle" size={32} color="#FF4500" />
+            <Ionicons name="person-circle" size={32} color={tct('#FF4500')} />
           </TouchableOpacity>
         </View>
       </View>
 
       <View style={homeStyles.locationSection}>
-        <Ionicons name="hand-right-outline" size={16} color="#666" />
+        <Ionicons name="hand-right-outline" size={16} color={tct('#666')} />
         <Text style={homeStyles.locationText}>{firstName ? `Hello, ${firstName}!` : 'Welcome to NagarMitra!'}</Text>
       </View>
 
@@ -192,7 +194,7 @@ const HomeScreen = ({ navigation }) => {
       <View style={homeStyles.statsContainer}>
         {statsError && (
           <TouchableOpacity style={homeStyles.errorBanner} onPress={loadStats}>
-            <Ionicons name="cloud-offline-outline" size={18} color="#DC3545" />
+            <Ionicons name="cloud-offline-outline" size={18} color={tct('#DC3545')} />
             <Text style={homeStyles.errorBannerText}>Couldn't load live numbers. Tap to retry.</Text>
           </TouchableOpacity>
         )}
@@ -222,17 +224,17 @@ const HomeScreen = ({ navigation }) => {
       <View style={homeStyles.recentUpdatesContainer}>
         <Text style={homeStyles.sectionTitle}>Recent Updates</Text>
         {loadingStats && !updates.length ? (
-          <ActivityIndicator color="#FF4500" />
+          <ActivityIndicator color={tct('#FF4500')} />
         ) : updates.length === 0 ? (
           <Text style={homeStyles.emptyText}>No reports yet. Be the first to raise one!</Text>
         ) : (
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>
             {updates.map((u) => (
-              <View key={u._id} style={[homeStyles.updateCard, u.status === 'resolved' ? null : { borderLeftColor: '#FFC107' }]}>
+              <View key={u._id} style={[homeStyles.updateCard, u.status === 'resolved' ? null : { borderLeftColor: tc('#FFC107') }]}>
                 <Ionicons
                   name={u.status === 'resolved' ? 'checkmark-circle' : 'construct'}
                   size={20}
-                  color={u.status === 'resolved' ? '#28A745' : '#FFC107'}
+                  color={u.status === 'resolved' ? tc('#28A745') : tc('#FFC107')}
                 />
                 <Text style={homeStyles.updateText} numberOfLines={2}>{u.title || u.category}</Text>
                 <Text style={homeStyles.updateTime}>{formatAgo(u.createdAt)} · {String(u.status || '').replace('_', ' ')}</Text>
@@ -246,11 +248,11 @@ const HomeScreen = ({ navigation }) => {
       <View style={homeStyles.footer}>
         <Text style={homeStyles.footerTitle}>Need Help?</Text>
         <View style={homeStyles.contactRow}>
-          <Ionicons name="call" size={16} color="#FF4500" />
+          <Ionicons name="call" size={16} color={tct('#FF4500')} />
           <Text style={homeStyles.contactText}>Helpline: 1800-123-4567</Text>
         </View>
         <View style={homeStyles.contactRow}>
-          <Ionicons name="mail" size={16} color="#FF4500" />
+          <Ionicons name="mail" size={16} color={tct('#FF4500')} />
           <Text style={homeStyles.contactText}>support@nagarmitra.gov.in</Text>
         </View>
       </View>
@@ -292,8 +294,8 @@ function MainTabs() {
   // Wait for the role so the tabs don't switch under the user's finger
   if (!ready) {
     return (
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFF' }}>
-        <ActivityIndicator size="large" color="#FF4500" />
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: tc('#FFF') }}>
+        <ActivityIndicator size="large" color={tct('#FF4500')} />
       </View>
     );
   }
@@ -304,8 +306,8 @@ function MainTabs() {
         tabBarIcon: ({ color, size, focused }) => (
           <Ionicons name={focused ? TAB_ICONS[route.name] : `${TAB_ICONS[route.name]}-outline`} size={size} color={color} />
         ),
-        tabBarActiveTintColor: '#FF4500',
-        tabBarInactiveTintColor: '#666',
+        tabBarActiveTintColor: tc('#FF4500'),
+        tabBarInactiveTintColor: tc('#666'),
       })}
     >
       {isAdmin && <Tab.Screen name="Admin" component={Safe.AdminScreen} />}
@@ -359,6 +361,23 @@ const HomeStack = () => (
 );
 
 export default function App() {
+  const systemScheme = useColorScheme();
+  const [themePref, setThemePrefState] = React.useState('system');
+  const scheme = themePref === 'system' ? (systemScheme === 'dark' ? 'dark' : 'light') : themePref;
+  // Must be set before any child renders so tc()/themedStyles() resolve correctly
+  setScheme(scheme);
+
+  React.useEffect(() => {
+    AsyncStorage.getItem('theme_pref')
+      .then((v) => { if (v === 'light' || v === 'dark' || v === 'system') setThemePrefState(v); })
+      .catch(() => {});
+  }, []);
+  const setThemePref = React.useCallback((v) => {
+    setThemePrefState(v);
+    AsyncStorage.setItem('theme_pref', v).catch(() => {});
+  }, []);
+  const themeValue = React.useMemo(() => ({ pref: themePref, scheme, setPref: setThemePref }), [themePref, scheme, setThemePref]);
+
   const [showOnboarding, setShowOnboarding] = React.useState(null); // null=loading
   const [user, setUser] = React.useState(null);
   const [authReady, setAuthReady] = React.useState(false);
@@ -418,31 +437,34 @@ export default function App() {
     };
   }, [user]);
 
+  const base = scheme === 'dark' ? DarkTheme : DefaultTheme;
   const theme = {
-    ...DefaultTheme,
+    ...base,
     colors: {
-      ...DefaultTheme.colors,
-      primary: '#FF6A00', // dark orange
-      background: '#FFFFFF',
-      text: '#111111',
-      card: '#FFFFFF',
-      border: '#E5E5E5',
+      ...base.colors,
+      primary: tc('#FF6A00'), // dark orange
+      background: tc('#FFFFFF'),
+      text: tc('#111111'),
+      card: tc('#FFFFFF'),
+      border: tc('#E5E5E5'),
     },
   };
 
   if (showOnboarding === null || !authReady) {
     return (
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFF' }}>
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: tc('#FFF') }}>
         <Image source={require('./assets/logo.png')} style={{ width: 72, height: 72, marginBottom: 16 }} resizeMode="contain" />
-        <ActivityIndicator size="large" color="#FF4500" />
+        <ActivityIndicator size="large" color={tct('#FF4500')} />
       </View>
     );
   }
 
   return (
+    <ThemeContext.Provider value={themeValue}>
     <SafeAreaProvider>
-      <StatusBar style="dark" />
-      <SafeAreaView style={{ flex: 1, backgroundColor: '#FFF' }} edges={['top', 'left', 'right']}>
+      <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
+      {/* key: remount the UI when the scheme changes so every stylesheet is rebuilt */}
+      <SafeAreaView key={scheme} style={{ flex: 1, backgroundColor: tc('#FFF') }} edges={['top', 'left', 'right']}>
         <ErrorBoundary>
           <SessionProvider firebaseUser={user} onNewNotifications={showLocalAlert}>
           <NavigationContainer theme={theme} ref={navigationRef}>
@@ -459,15 +481,16 @@ export default function App() {
         </ErrorBoundary>
       </SafeAreaView>
     </SafeAreaProvider>
+    </ThemeContext.Provider>
   );
 }
 
 const { width } = Dimensions.get('window');
 
-const homeStyles = StyleSheet.create({
+const homeStyles = themedStyles(() => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFF',
+    backgroundColor: tc('#FFF'),
   },
   header: {
     flexDirection: 'row',
@@ -489,7 +512,7 @@ const homeStyles = StyleSheet.create({
   logoText: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#FF4500',
+    color: tct('#FF4500'),
     letterSpacing: 0.5,
   },
   profileButton: {
@@ -506,7 +529,7 @@ const homeStyles = StyleSheet.create({
   },
   locationText: {
     fontSize: 14,
-    color: '#666',
+    color: tct('#666'),
   },
   slideshowContainer: {
     marginBottom: 20,
@@ -558,21 +581,21 @@ const homeStyles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#DDD',
+    backgroundColor: tc('#DDD'),
   },
   slideIndicatorActive: {
-    backgroundColor: '#FF4500',
+    backgroundColor: tc('#FF4500'),
     width: 20,
   },
   raiseComplaintButton: {
-    backgroundColor: '#FF4500',
+    backgroundColor: tc('#FF4500'),
     marginHorizontal: 20,
     padding: 20,
     borderRadius: 12,
     alignItems: 'center',
     marginBottom: 20,
     elevation: 3,
-    shadowColor: '#FF4500',
+    shadowColor: tc('#FF4500'),
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
     shadowRadius: 4,
@@ -600,40 +623,40 @@ const homeStyles = StyleSheet.create({
   },
   statCard: {
     flex: 1,
-    backgroundColor: '#F8F9FA',
+    backgroundColor: tc('#F8F9FA'),
     padding: 15,
     borderRadius: 8,
     alignItems: 'center',
     borderLeftWidth: 4,
-    borderLeftColor: '#FF4500',
+    borderLeftColor: tc('#FF4500'),
   },
   statValue: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#000',
+    color: tct('#000'),
     marginBottom: 4,
   },
   statLabel: {
     fontSize: 12,
-    color: '#666',
+    color: tct('#666'),
     textAlign: 'center',
   },
   errorBanner: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: '#FFEBEE',
+    backgroundColor: tc('#FFEBEE'),
     padding: 10,
     borderRadius: 8,
     marginBottom: 10,
   },
   errorBannerText: {
-    color: '#DC3545',
+    color: tct('#DC3545'),
     fontSize: 13,
     flex: 1,
   },
   emptyText: {
-    color: '#888',
+    color: tct('#888'),
     fontSize: 14,
   },
   recentUpdatesContainer: {
@@ -643,36 +666,36 @@ const homeStyles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#000',
+    color: tct('#000'),
     marginBottom: 15,
   },
   updateCard: {
-    backgroundColor: '#F8F9FA',
+    backgroundColor: tc('#F8F9FA'),
     padding: 12,
     borderRadius: 8,
     marginRight: 12,
     width: 200,
     borderLeftWidth: 3,
-    borderLeftColor: '#28A745',
+    borderLeftColor: tc('#28A745'),
   },
   updateText: {
     fontSize: 14,
-    color: '#000',
+    color: tct('#000'),
     marginVertical: 4,
   },
   updateTime: {
     fontSize: 12,
-    color: '#666',
+    color: tct('#666'),
   },
   footer: {
-    backgroundColor: '#F8F9FA',
+    backgroundColor: tc('#F8F9FA'),
     padding: 20,
     marginTop: 20,
   },
   footerTitle: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#000',
+    color: tct('#000'),
     marginBottom: 10,
   },
   contactRow: {
@@ -683,6 +706,6 @@ const homeStyles = StyleSheet.create({
   },
   contactText: {
     fontSize: 14,
-    color: '#666',
+    color: tct('#666'),
   },
-});
+}));

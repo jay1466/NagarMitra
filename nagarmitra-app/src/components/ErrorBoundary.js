@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { reportClientError } from '../services/crashReporter';
 
+import { tc, tct, themedStyles } from '../theme';
 // Catches render errors in a subtree so one broken screen shows a retry
 // card instead of closing the whole app.
 export default class ErrorBoundary extends React.Component {
@@ -31,7 +32,7 @@ export default class ErrorBoundary extends React.Component {
     if (!this.state.hasError) return this.props.children;
     return (
       <View style={styles.container}>
-        <Ionicons name="warning-outline" size={56} color="#FF4500" />
+        <Ionicons name="warning-outline" size={56} color={tct('#FF4500')} />
         <Text style={styles.title}>Something went wrong</Text>
         <Text style={styles.message}>
           {this.props.message || 'This screen ran into a problem. Please try again.'}
@@ -55,10 +56,10 @@ export function withErrorBoundary(Screen) {
   return Wrapped;
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32, backgroundColor: '#FFF' },
-  title: { fontSize: 20, fontWeight: 'bold', color: '#222', marginTop: 16 },
-  message: { fontSize: 15, color: '#666', textAlign: 'center', marginTop: 8, lineHeight: 21 },
-  button: { marginTop: 24, backgroundColor: '#FF4500', paddingHorizontal: 32, paddingVertical: 12, borderRadius: 8 },
+const styles = themedStyles(() => StyleSheet.create({
+  container: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32, backgroundColor: tc('#FFF') },
+  title: { fontSize: 20, fontWeight: 'bold', color: tct('#222'), marginTop: 16 },
+  message: { fontSize: 15, color: tct('#666'), textAlign: 'center', marginTop: 8, lineHeight: 21 },
+  button: { marginTop: 24, backgroundColor: tc('#FF4500'), paddingHorizontal: 32, paddingVertical: 12, borderRadius: 8 },
   buttonText: { color: '#FFF', fontSize: 16, fontWeight: 'bold' },
-});
+}));

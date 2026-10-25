@@ -12,7 +12,18 @@ import { APP_VERSION } from '../appInfo';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+import { tc, tct, themedStyles } from '../theme';
+import { useThemePref } from '../context/ThemeContext';
+const THEME_LABELS = { system: 'System default', light: 'Light', dark: 'Dark' };
+
 const SettingsScreen = ({ navigation }) => {
+  const { pref, setPref } = useThemePref();
+  const chooseTheme = () =>
+    Alert.alert('Appearance', 'Choose how NagarMitra looks', [
+      { text: 'System default', onPress: () => setPref('system') },
+      { text: 'Light', onPress: () => setPref('light') },
+      { text: 'Dark', onPress: () => setPref('dark') },
+    ]);
   const [settings, setSettings] = useState({
     notifications: {
       enabled: true,
@@ -88,7 +99,7 @@ const SettingsScreen = ({ navigation }) => {
 
   const renderSectionHeader = (title, icon) => (
     <View style={styles.sectionHeader}>
-      <Ionicons name={icon} size={20} color="#FF4500" />
+      <Ionicons name={icon} size={20} color={tct('#FF4500')} />
       <Text style={styles.sectionTitle}>{title}</Text>
     </View>
   );
@@ -102,8 +113,8 @@ const SettingsScreen = ({ navigation }) => {
       <Switch
         value={value}
         onValueChange={onValueChange}
-        trackColor={{ false: '#E0E0E0', true: '#FF450080' }}
-        thumbColor={value ? '#FF4500' : '#FFF'}
+        trackColor={{ false: tc('#E0E0E0'), true: tc('#FF450080') }}
+        thumbColor={value ? tc('#FF4500') : '#FFF'}
       />
     </View>
   );
@@ -116,7 +127,7 @@ const SettingsScreen = ({ navigation }) => {
       </View>
       <View style={styles.navigationValue}>
         {value && <Text style={styles.valueText}>{value}</Text>}
-        <Ionicons name="chevron-forward" size={16} color="#CCC" />
+        <Ionicons name="chevron-forward" size={16} color={tct('#CCC')} />
       </View>
     </TouchableOpacity>
   );
@@ -126,7 +137,7 @@ const SettingsScreen = ({ navigation }) => {
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={24} color="#FF4500" />
+          <Ionicons name="arrow-back" size={24} color={tct('#FF4500')} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Settings</Text>
         <View style={styles.placeholder} />
@@ -224,8 +235,8 @@ const SettingsScreen = ({ navigation }) => {
           {renderNavigationSetting(
             'Theme',
             'Choose app appearance',
-            () => Alert.alert('Info', 'Theme selection will be available in future updates'),
-            settings.general.theme
+            chooseTheme,
+            THEME_LABELS[pref]
           )}
           
           {renderSwitchSetting(
@@ -299,10 +310,10 @@ const SettingsScreen = ({ navigation }) => {
           
           <TouchableOpacity style={styles.settingItem} onPress={resetSettings}>
             <View style={styles.settingContent}>
-              <Text style={[styles.settingTitle, { color: '#DC3545' }]}>Reset Settings</Text>
+              <Text style={[styles.settingTitle, { color: tct('#DC3545') }]}>Reset Settings</Text>
               <Text style={styles.settingDescription}>Reset all settings to default values</Text>
             </View>
-            <Ionicons name="refresh" size={20} color="#DC3545" />
+            <Ionicons name="refresh" size={20} color={tct('#DC3545')} />
           </TouchableOpacity>
         </View>
 
@@ -318,10 +329,10 @@ const SettingsScreen = ({ navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFF',
+    backgroundColor: tc('#FFF'),
   },
   header: {
     flexDirection: 'row',
@@ -331,12 +342,12 @@ const styles = StyleSheet.create({
     paddingTop: 20,
     paddingBottom: 15,
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
+    borderBottomColor: tc('#F0F0F0'),
   },
   headerTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#000',
+    color: tct('#000'),
   },
   placeholder: {
     width: 24,
@@ -347,19 +358,19 @@ const styles = StyleSheet.create({
   section: {
     paddingVertical: 5,
     borderBottomWidth: 1,
-    borderBottomColor: '#F8F8F8',
+    borderBottomColor: tc('#F8F8F8'),
   },
   sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 20,
     paddingVertical: 15,
-    backgroundColor: '#FAFAFA',
+    backgroundColor: tc('#FAFAFA'),
   },
   sectionTitle: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#FF4500',
+    color: tct('#FF4500'),
     marginLeft: 10,
   },
   settingItem: {
@@ -369,7 +380,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 15,
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
+    borderBottomColor: tc('#F0F0F0'),
   },
   settingContent: {
     flex: 1,
@@ -377,12 +388,12 @@ const styles = StyleSheet.create({
   },
   settingTitle: {
     fontSize: 16,
-    color: '#000',
+    color: tct('#000'),
     marginBottom: 4,
   },
   settingDescription: {
     fontSize: 14,
-    color: '#666',
+    color: tct('#666'),
     lineHeight: 18,
   },
   navigationValue: {
@@ -391,7 +402,7 @@ const styles = StyleSheet.create({
   },
   valueText: {
     fontSize: 14,
-    color: '#666',
+    color: tct('#666'),
     marginRight: 8,
   },
   infoSection: {
@@ -401,15 +412,15 @@ const styles = StyleSheet.create({
   infoTitle: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#FF4500',
+    color: tct('#FF4500'),
     marginBottom: 10,
   },
   infoText: {
     fontSize: 14,
-    color: '#666',
+    color: tct('#666'),
     textAlign: 'center',
     lineHeight: 20,
   },
-});
+}));
 
 export default SettingsScreen;

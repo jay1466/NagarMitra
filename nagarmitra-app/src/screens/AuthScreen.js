@@ -25,6 +25,7 @@ import {
 } from '../lib/firebase';
 import { userAPI } from '../api/client';
 
+import { tc, tct, themedStyles } from '../theme';
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
 const AUTH_ERRORS = {
@@ -53,13 +54,13 @@ function Field({ label, icon, error, right, inputRef, ...inputProps }) {
     <View style={styles.inputGroup}>
       <Text style={styles.inputLabel}>{label}</Text>
       <View style={[styles.inputRow, focused && styles.inputRowFocused, error && styles.inputRowError]}>
-        <Ionicons name={icon} size={20} color={focused ? '#FF4500' : '#888'} style={styles.inputIcon} />
+        <Ionicons name={icon} size={20} color={focused ? tc('#FF4500') : tc('#888')} style={styles.inputIcon} />
         <TextInput
           ref={inputRef}
           style={styles.input}
-          placeholderTextColor="#9A9A9A"
-          selectionColor="#FF4500"
-          cursorColor="#FF4500"
+          placeholderTextColor={tc('#9A9A9A')}
+          selectionColor={tc('#FF4500')}
+          cursorColor={tc('#FF4500')}
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
           {...inputProps}
@@ -261,7 +262,7 @@ export default function AuthScreen() {
                 style={styles.eyeButton}
                 accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
               >
-                <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={22} color="#666" />
+                <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={22} color={tct('#666')} />
               </TouchableOpacity>
             }
           />
@@ -271,8 +272,8 @@ export default function AuthScreen() {
             <Switch
               value={rememberMe}
               onValueChange={setRememberMe}
-              trackColor={{ false: '#DDD', true: '#FFB08A' }}
-              thumbColor={rememberMe ? '#FF4500' : '#F4F4F4'}
+              trackColor={{ false: tc('#DDD'), true: tc('#FFB08A') }}
+              thumbColor={rememberMe ? tc('#FF4500') : '#F4F4F4'}
             />
           </View>
 
@@ -306,62 +307,62 @@ export default function AuthScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FFF7F3' },
+const styles = themedStyles(() => StyleSheet.create({
+  container: { flex: 1, backgroundColor: tc('#FFF7F3') },
   scrollContainer: { flexGrow: 1, padding: 20, paddingBottom: 40, justifyContent: 'center' },
   header: { alignItems: 'center', marginBottom: 20 },
   logoImage: { width: 64, height: 64 },
-  logoText: { fontSize: 28, fontWeight: 'bold', color: '#FF4500', marginTop: 6 },
-  tagline: { fontSize: 15, color: '#FF4500', fontWeight: '600', marginTop: 4, fontStyle: 'italic' },
+  logoText: { fontSize: 28, fontWeight: 'bold', color: tct('#FF4500'), marginTop: 6 },
+  tagline: { fontSize: 15, color: tct('#FF4500'), fontWeight: '600', marginTop: 4, fontStyle: 'italic' },
   card: {
-    backgroundColor: '#FFF',
+    backgroundColor: tc('#FFF'),
     borderRadius: 16,
     padding: 20,
     elevation: 3,
-    shadowColor: '#000',
+    shadowColor: tc('#000'),
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.08,
     shadowRadius: 8,
   },
-  modeSelector: { flexDirection: 'row', backgroundColor: '#F2F2F2', borderRadius: 25, padding: 4, marginBottom: 20 },
+  modeSelector: { flexDirection: 'row', backgroundColor: tc('#F2F2F2'), borderRadius: 25, padding: 4, marginBottom: 20 },
   modeButton: { flex: 1, paddingVertical: 10, alignItems: 'center', borderRadius: 21 },
-  modeButtonActive: { backgroundColor: '#FF4500' },
-  modeButtonText: { fontSize: 16, fontWeight: '600', color: '#666' },
+  modeButtonActive: { backgroundColor: tc('#FF4500') },
+  modeButtonText: { fontSize: 16, fontWeight: '600', color: tct('#666') },
   modeButtonTextActive: { color: '#FFF' },
-  title: { fontSize: 22, fontWeight: 'bold', color: '#1A1A1A' },
-  subtitle: { fontSize: 14, color: '#666', marginTop: 4, marginBottom: 18 },
+  title: { fontSize: 22, fontWeight: 'bold', color: tct('#1A1A1A') },
+  subtitle: { fontSize: 14, color: tct('#666'), marginTop: 4, marginBottom: 18 },
   inputGroup: { marginBottom: 14 },
-  inputLabel: { fontSize: 14, fontWeight: '600', color: '#333', marginBottom: 6 },
+  inputLabel: { fontSize: 14, fontWeight: '600', color: tct('#333'), marginBottom: 6 },
   inputRow: {
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1.5,
-    borderColor: '#DDD',
+    borderColor: tc('#DDD'),
     borderRadius: 10,
-    backgroundColor: '#FAFAFA',
+    backgroundColor: tc('#FAFAFA'),
     minHeight: 50,
   },
-  inputRowFocused: { borderColor: '#FF4500', backgroundColor: '#FFF' },
-  inputRowError: { borderColor: '#DC3545' },
+  inputRowFocused: { borderColor: tc('#FF4500'), backgroundColor: tc('#FFF') },
+  inputRowError: { borderColor: tc('#DC3545') },
   inputIcon: { marginLeft: 12 },
   // Explicit text colour: without it Android dark mode renders white text on this white field
-  input: { flex: 1, fontSize: 16, color: '#1A1A1A', paddingHorizontal: 10, paddingVertical: Platform.OS === 'ios' ? 14 : 10 },
+  input: { flex: 1, fontSize: 16, color: tct('#1A1A1A'), paddingHorizontal: 10, paddingVertical: Platform.OS === 'ios' ? 14 : 10 },
   eyeButton: { paddingHorizontal: 12, paddingVertical: 10 },
-  errorText: { color: '#DC3545', fontSize: 13, marginTop: 5 },
+  errorText: { color: tct('#DC3545'), fontSize: 13, marginTop: 5 },
   rememberContainer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginVertical: 6 },
-  rememberText: { fontSize: 15, color: '#333' },
+  rememberText: { fontSize: 15, color: tct('#333') },
   submitButton: {
-    backgroundColor: '#FF4500',
+    backgroundColor: tc('#FF4500'),
     minHeight: 52,
     borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 14,
   },
-  submitButtonDisabled: { backgroundColor: '#FF9F7A' },
+  submitButtonDisabled: { backgroundColor: tc('#FF9F7A') },
   buttonText: { color: '#FFF', fontSize: 17, fontWeight: 'bold' },
   linkButton: { paddingVertical: 10, alignItems: 'center' },
-  forgotPassword: { fontSize: 15, color: '#FF4500', fontWeight: '600' },
-  switchText: { fontSize: 14, color: '#666' },
-  switchTextBold: { color: '#FF4500', fontWeight: 'bold' },
-});
+  forgotPassword: { fontSize: 15, color: tct('#FF4500'), fontWeight: '600' },
+  switchText: { fontSize: 14, color: tct('#666') },
+  switchTextBold: { color: tct('#FF4500'), fontWeight: 'bold' },
+}));

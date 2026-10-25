@@ -4,6 +4,7 @@ import { reportClientError } from '../services/crashReporter';
 import { WebView } from 'react-native-webview';
 import { Ionicons } from '@expo/vector-icons';
 
+import { tc, tct, themedStyles, isDark } from '../theme';
 // OpenStreetMap + Leaflet inside a WebView. Unlike react-native-maps on Android,
 // this needs no Google Maps API key, so the APK can't crash on a missing key.
 const html = `<!DOCTYPE html>
@@ -12,6 +13,8 @@ const html = `<!DOCTYPE html>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"/>
 <style>html,body,#map{height:100%;margin:0;padding:0;background:#EEE}
 .pin{width:22px;height:22px;border-radius:11px;border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.4)}
+.dark .leaflet-tile-pane{filter:invert(1) hue-rotate(180deg) brightness(.9) contrast(.9)}
+.dark .leaflet-container{background:#1b1b1b}
 .me{width:16px;height:16px;border-radius:8px;background:#007BFF;border:3px solid #fff;box-shadow:0 0 0 2px rgba(0,123,255,.35)}</style>
 </head><body><div id="map"></div>
 <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -25,6 +28,7 @@ const html = `<!DOCTYPE html>
   var layer = L.layerGroup().addTo(map);
   function esc(s){ return String(s||'').replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
   window.render = function(data){
+    document.body.classList.toggle('dark', !!data.dark);
     layer.clearLayers();
     var bounds = [];
     if (data.mode === 'heatmap' && data.points.length && L.heatLayer) {
@@ -61,7 +65,7 @@ export default function IssueMap({ points, mode = 'markers', userLocation, heigh
   }, []);
 
   const payload = useMemo(
-    () => JSON.stringify({ points, mode, me: userLocation || null }),
+    () => JSON.stringify({ points, mode, me: userLocation || null, dark: isDark() }),
     [points, mode, userLocation]
   );
 
@@ -78,10 +82,10 @@ export default function IssueMap({ points, mode = 'markers', userLocation, heigh
   if (failed) {
     return (
       <View style={[styles.fallback, { height }]}>
-        <Ionicons name="map-outline" size={36} color="#BBB" />
+        <Ionicons name="map-outline" size={36} color={tct('#BBB')} />
         <Text style={styles.fallbackText}>Map couldn't load. Check your internet connection.</Text>
         <TouchableOpacity onPress={retry} style={{ marginTop: 10 }}>
-          <Text style={{ color: '#FF4500', fontWeight: 'bold' }}>Try again</Text>
+          <Text style={{ color: tct('#FF4500'), fontWeight: 'bold' }}>Try again</Text>
         </TouchableOpacity>
       </View>
     );
@@ -90,7 +94,7 @@ export default function IssueMap({ points, mode = 'markers', userLocation, heigh
   if (!mounted) {
     return (
       <View style={[styles.wrapper, styles.loading, { height, position: 'relative' }]}>
-        <ActivityIndicator color="#FF4500" />
+        <ActivityIndicator color={tct('#FF4500')} />
       </View>
     );
   }
@@ -127,17 +131,17 @@ export default function IssueMap({ points, mode = 'markers', userLocation, heigh
       />
       {!ready && (
         <View style={styles.loading} pointerEvents="none">
-          <ActivityIndicator color="#FF4500" />
+          <ActivityIndicator color={tct('#FF4500')} />
         </View>
       )}
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  wrapper: { borderRadius: 12, overflow: 'hidden', backgroundColor: '#EEE' },
+const styles = themedStyles(() => StyleSheet.create({
+  wrapper: { borderRadius: 12, overflow: 'hidden', backgroundColor: tc('#EEE') },
   web: { flex: 1, backgroundColor: 'transparent' },
   loading: { ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center' },
-  fallback: { borderRadius: 12, backgroundColor: '#F2F2F2', alignItems: 'center', justifyContent: 'center', padding: 20 },
-  fallbackText: { color: '#888', marginTop: 8, textAlign: 'center' },
-});
+  fallback: { borderRadius: 12, backgroundColor: tc('#F2F2F2'), alignItems: 'center', justifyContent: 'center', padding: 20 },
+  fallbackText: { color: tct('#888'), marginTop: 8, textAlign: 'center' },
+}));

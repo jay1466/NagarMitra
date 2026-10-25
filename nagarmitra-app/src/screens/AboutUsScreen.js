@@ -10,6 +10,7 @@ import {
 import { APP_VERSION, RELEASE_DATE, COPYRIGHT_YEAR } from '../appInfo';
 import { Ionicons } from '@expo/vector-icons';
 
+import { tc, tct, themedStyles } from '../theme';
 const AboutUsScreen = ({ navigation }) => {
   const handleLinkPress = (url) => {
     Linking.openURL(url).catch(err => console.error('Failed to open URL:', err));
@@ -65,7 +66,7 @@ const AboutUsScreen = ({ navigation }) => {
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={24} color="#FF4500" />
+          <Ionicons name="arrow-back" size={24} color={tct('#FF4500')} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>About Us</Text>
         <View style={styles.placeholder} />
@@ -74,7 +75,7 @@ const AboutUsScreen = ({ navigation }) => {
       {/* App Logo and Tagline */}
       <View style={styles.logoSection}>
         <View style={styles.logoContainer}>
-          <Ionicons name="ribbon" size={60} color="#FF4500" />
+          <Ionicons name="ribbon" size={60} color={tct('#FF4500')} />
         </View>
         <Text style={styles.appName}>NagarMitra</Text>
         <Text style={styles.tagline}>जन की आवाज, सरकार का समाधान</Text>
@@ -95,7 +96,7 @@ const AboutUsScreen = ({ navigation }) => {
         {features.map((feature, index) => (
           <View key={index} style={styles.featureItem}>
             <View style={styles.featureIcon}>
-              <Ionicons name={feature.icon} size={24} color="#FF4500" />
+              <Ionicons name={feature.icon} size={24} color={tct('#FF4500')} />
             </View>
             <View style={styles.featureContent}>
               <Text style={styles.featureTitle}>{feature.title}</Text>
@@ -111,7 +112,7 @@ const AboutUsScreen = ({ navigation }) => {
         {teamMembers.map((member, index) => (
           <View key={index} style={styles.teamMember}>
             <View style={styles.memberAvatar}>
-              <Ionicons name="people" size={20} color="#FF4500" />
+              <Ionicons name="people" size={20} color={tct('#FF4500')} />
             </View>
             <View style={styles.memberInfo}>
               <Text style={styles.memberName}>{member.name}</Text>
@@ -177,21 +178,21 @@ const AboutUsScreen = ({ navigation }) => {
           style={styles.contactItem}
           onPress={() => handleEmailPress('support@nagarmitra.gov.in')}
         >
-          <Ionicons name="mail-outline" size={20} color="#FF4500" />
+          <Ionicons name="mail-outline" size={20} color={tct('#FF4500')} />
           <Text style={styles.contactText}>support@nagarmitra.gov.in</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.contactItem}
           onPress={() => Linking.openURL('tel:1800-123-4567')}
         >
-          <Ionicons name="call-outline" size={20} color="#FF4500" />
+          <Ionicons name="call-outline" size={20} color={tct('#FF4500')} />
           <Text style={styles.contactText}>1800-123-4567 (Helpline)</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.contactItem}
           onPress={() => handleLinkPress('https://nagarmitra.gov.in')}
         >
-          <Ionicons name="globe-outline" size={20} color="#FF4500" />
+          <Ionicons name="globe-outline" size={20} color={tct('#FF4500')} />
           <Text style={styles.contactText}>www.nagarmitra.gov.in</Text>
         </TouchableOpacity>
       </View>
@@ -201,15 +202,15 @@ const AboutUsScreen = ({ navigation }) => {
         <Text style={styles.sectionTitle}>Legal</Text>
         <TouchableOpacity style={styles.legalItem}>
           <Text style={styles.legalText}>Privacy Policy</Text>
-          <Ionicons name="chevron-forward" size={16} color="#CCC" />
+          <Ionicons name="chevron-forward" size={16} color={tct('#CCC')} />
         </TouchableOpacity>
         <TouchableOpacity style={styles.legalItem}>
           <Text style={styles.legalText}>Terms of Service</Text>
-          <Ionicons name="chevron-forward" size={16} color="#CCC" />
+          <Ionicons name="chevron-forward" size={16} color={tct('#CCC')} />
         </TouchableOpacity>
         <TouchableOpacity style={styles.legalItem}>
           <Text style={styles.legalText}>Open Source Licenses</Text>
-          <Ionicons name="chevron-forward" size={16} color="#CCC" />
+          <Ionicons name="chevron-forward" size={16} color={tct('#CCC')} />
         </TouchableOpacity>
       </View>
 
@@ -226,10 +227,10 @@ const AboutUsScreen = ({ navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFF',
+    backgroundColor: tc('#FFF'),
   },
   header: {
     flexDirection: 'row',
@@ -239,12 +240,12 @@ const styles = StyleSheet.create({
     paddingTop: 20,
     paddingBottom: 15,
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
+    borderBottomColor: tc('#F0F0F0'),
   },
   headerTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#000',
+    color: tct('#000'),
   },
   placeholder: {
     width: 24, // Same as back button to center the title
@@ -253,13 +254,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 40,
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
+    borderBottomColor: tc('#F0F0F0'),
   },
   logoContainer: {
     width: 100,
     height: 100,
     borderRadius: 50,
-    backgroundColor: '#FF450015',
+    backgroundColor: tc('#FF450015'),
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 20,
@@ -267,35 +268,35 @@ const styles = StyleSheet.create({
   appName: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#FF4500',
+    color: tct('#FF4500'),
     marginBottom: 8,
   },
   tagline: {
     fontSize: 16,
-    color: '#333',
+    color: tct('#333'),
     marginBottom: 4,
     fontWeight: '600',
   },
   taglineEnglish: {
     fontSize: 14,
-    color: '#666',
+    color: tct('#666'),
     fontStyle: 'italic',
   },
   section: {
     paddingHorizontal: 20,
     paddingVertical: 25,
     borderBottomWidth: 1,
-    borderBottomColor: '#F8F8F8',
+    borderBottomColor: tc('#F8F8F8'),
   },
   sectionTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#000',
+    color: tct('#000'),
     marginBottom: 15,
   },
   missionText: {
     fontSize: 16,
-    color: '#333',
+    color: tct('#333'),
     lineHeight: 24,
     textAlign: 'justify',
   },
@@ -308,7 +309,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#FF450015',
+    backgroundColor: tc('#FF450015'),
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 15,
@@ -319,12 +320,12 @@ const styles = StyleSheet.create({
   featureTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#000',
+    color: tct('#000'),
     marginBottom: 5,
   },
   featureDescription: {
     fontSize: 14,
-    color: '#666',
+    color: tct('#666'),
     lineHeight: 20,
   },
   teamMember: {
@@ -336,7 +337,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#FF450015',
+    backgroundColor: tc('#FF450015'),
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 15,
@@ -347,18 +348,18 @@ const styles = StyleSheet.create({
   memberName: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#000',
+    color: tct('#000'),
     marginBottom: 4,
   },
   memberRole: {
     fontSize: 14,
-    color: '#FF4500',
+    color: tct('#FF4500'),
     fontWeight: '500',
     marginBottom: 6,
   },
   memberDescription: {
     fontSize: 14,
-    color: '#666',
+    color: tct('#666'),
     lineHeight: 20,
   },
   techStack: {
@@ -370,12 +371,12 @@ const styles = StyleSheet.create({
   techCategoryTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#FF4500',
+    color: tct('#FF4500'),
     marginBottom: 8,
   },
   techItem: {
     fontSize: 14,
-    color: '#333',
+    color: tct('#333'),
     marginBottom: 4,
     lineHeight: 20,
   },
@@ -386,21 +387,21 @@ const styles = StyleSheet.create({
   },
   infoItem: {
     width: '47%',
-    backgroundColor: '#F8F9FA',
+    backgroundColor: tc('#F8F9FA'),
     padding: 15,
     borderRadius: 8,
     borderLeftWidth: 3,
-    borderLeftColor: '#FF4500',
+    borderLeftColor: tc('#FF4500'),
   },
   infoLabel: {
     fontSize: 12,
-    color: '#666',
+    color: tct('#666'),
     fontWeight: '500',
     marginBottom: 5,
   },
   infoValue: {
     fontSize: 16,
-    color: '#000',
+    color: tct('#000'),
     fontWeight: '600',
   },
   contactItem: {
@@ -408,11 +409,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
+    borderBottomColor: tc('#F0F0F0'),
   },
   contactText: {
     fontSize: 16,
-    color: '#333',
+    color: tct('#333'),
     marginLeft: 15,
   },
   legalItem: {
@@ -421,11 +422,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 15,
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
+    borderBottomColor: tc('#F0F0F0'),
   },
   legalText: {
     fontSize: 16,
-    color: '#333',
+    color: tct('#333'),
   },
   footer: {
     alignItems: 'center',
@@ -434,15 +435,15 @@ const styles = StyleSheet.create({
   },
   footerText: {
     fontSize: 16,
-    color: '#FF4500',
+    color: tct('#FF4500'),
     marginBottom: 10,
     textAlign: 'center',
   },
   copyrightText: {
     fontSize: 12,
-    color: '#999',
+    color: tct('#999'),
     textAlign: 'center',
   },
-});
+}));
 
 export default AboutUsScreen;

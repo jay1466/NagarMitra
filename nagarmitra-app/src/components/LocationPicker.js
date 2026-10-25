@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import { STATES, districtsOf, findState, findDistrict, matchGeocode } from '../data/india';
 
+import { tc, tct, themedStyles } from '../theme';
 /**
  * State → District dropdowns with optional "detect from GPS".
  * value: { state, district }   onChange({ state, district, coords?, address? })
@@ -82,7 +83,7 @@ export default function LocationPicker({ value, onChange, allowDetect = true, di
       </View>
       {allowDetect && !disabled && (
         <TouchableOpacity style={styles.detect} onPress={detect} disabled={detecting}>
-          {detecting ? <ActivityIndicator size="small" color="#FF4500" /> : <Ionicons name="locate" size={16} color="#FF4500" />}
+          {detecting ? <ActivityIndicator size="small" color={tct('#FF4500')} /> : <Ionicons name="locate" size={16} color={tct('#FF4500')} />}
           <Text style={styles.detectText}>{detecting ? 'Detecting…' : 'Detect my location'}</Text>
         </TouchableOpacity>
       )}
@@ -93,17 +94,17 @@ export default function LocationPicker({ value, onChange, allowDetect = true, di
             <View style={styles.sheetHeader}>
               <Text style={styles.sheetTitle}>{open === 'state' ? 'Choose state / UT' : `Choose district in ${state?.name || ''}`}</Text>
               <TouchableOpacity onPress={() => { setOpen(null); setQuery(''); }}>
-                <Ionicons name="close" size={24} color="#666" />
+                <Ionicons name="close" size={24} color={tct('#666')} />
               </TouchableOpacity>
             </View>
             <View style={styles.search}>
-              <Ionicons name="search" size={18} color="#999" />
+              <Ionicons name="search" size={18} color={tct('#999')} />
               <TextInput
                 style={styles.searchInput}
                 value={query}
                 onChangeText={setQuery}
                 placeholder="Search…"
-                placeholderTextColor="#999"
+                placeholderTextColor={tc('#999')}
                 autoCorrect={false}
               />
             </View>
@@ -118,7 +119,7 @@ export default function LocationPicker({ value, onChange, allowDetect = true, di
                   <TouchableOpacity style={[styles.option, selected && styles.optionSelected]} onPress={() => choose(item)}>
                     <Text style={[styles.optionText, selected && styles.optionTextSelected]}>{item.name}</Text>
                     {open === 'state' && <Text style={styles.optionHint}>{item.type === 'UT' ? 'UT' : `${item.districts.length} districts`}</Text>}
-                    {selected && <Ionicons name="checkmark" size={18} color="#FF4500" />}
+                    {selected && <Ionicons name="checkmark" size={18} color={tct('#FF4500')} />}
                   </TouchableOpacity>
                 );
               }}
@@ -134,17 +135,17 @@ export default function LocationPicker({ value, onChange, allowDetect = true, di
 function Select({ icon, placeholder, value, onPress, disabled }) {
   return (
     <TouchableOpacity style={[styles.select, disabled && styles.selectDisabled]} onPress={onPress} disabled={disabled}>
-      <Ionicons name={icon} size={16} color={value ? '#FF4500' : '#999'} />
+      <Ionicons name={icon} size={16} color={value ? tc('#FF4500') : tc('#999')} />
       <Text style={[styles.selectText, !value && styles.placeholder]} numberOfLines={1}>
         {value || placeholder}
       </Text>
-      <Ionicons name="chevron-down" size={16} color="#999" />
+      <Ionicons name="chevron-down" size={16} color={tct('#999')} />
     </TouchableOpacity>
   );
 }
 
-const styles = StyleSheet.create({
-  label: { fontSize: 14, fontWeight: '600', color: '#333', marginBottom: 6 },
+const styles = themedStyles(() => StyleSheet.create({
+  label: { fontSize: 14, fontWeight: '600', color: tct('#333'), marginBottom: 6 },
   row: { flexDirection: 'row', gap: 8 },
   select: {
     flex: 1,
@@ -152,27 +153,27 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 6,
     borderWidth: 1.5,
-    borderColor: '#DDD',
+    borderColor: tc('#DDD'),
     borderRadius: 10,
     paddingHorizontal: 10,
     minHeight: 48,
-    backgroundColor: '#FAFAFA',
+    backgroundColor: tc('#FAFAFA'),
   },
   selectDisabled: { opacity: 0.55 },
-  selectText: { flex: 1, fontSize: 15, color: '#1A1A1A' },
-  placeholder: { color: '#999' },
+  selectText: { flex: 1, fontSize: 15, color: tct('#1A1A1A') },
+  placeholder: { color: tct('#999') },
   detect: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', paddingVertical: 8 },
-  detectText: { color: '#FF4500', fontWeight: '600' },
+  detectText: { color: tct('#FF4500'), fontWeight: '600' },
   overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
-  sheet: { backgroundColor: '#FFF', borderTopLeftRadius: 18, borderTopRightRadius: 18, maxHeight: '80%', paddingBottom: 20 },
-  sheetHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, borderBottomWidth: 1, borderBottomColor: '#EEE' },
-  sheetTitle: { fontSize: 17, fontWeight: 'bold', color: '#222', flex: 1, marginRight: 10 },
-  search: { flexDirection: 'row', alignItems: 'center', gap: 8, margin: 12, paddingHorizontal: 12, borderRadius: 10, backgroundColor: '#F2F2F2' },
-  searchInput: { flex: 1, fontSize: 15, color: '#1A1A1A', paddingVertical: 10 },
-  option: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: '#F4F4F4' },
-  optionSelected: { backgroundColor: '#FFF1EA' },
-  optionText: { flex: 1, fontSize: 15, color: '#333' },
-  optionTextSelected: { color: '#FF4500', fontWeight: 'bold' },
-  optionHint: { fontSize: 12, color: '#999', marginRight: 8 },
-  empty: { textAlign: 'center', color: '#999', padding: 24 },
-});
+  sheet: { backgroundColor: tc('#FFF'), borderTopLeftRadius: 18, borderTopRightRadius: 18, maxHeight: '80%', paddingBottom: 20 },
+  sheetHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, borderBottomWidth: 1, borderBottomColor: tc('#EEE') },
+  sheetTitle: { fontSize: 17, fontWeight: 'bold', color: tct('#222'), flex: 1, marginRight: 10 },
+  search: { flexDirection: 'row', alignItems: 'center', gap: 8, margin: 12, paddingHorizontal: 12, borderRadius: 10, backgroundColor: tc('#F2F2F2') },
+  searchInput: { flex: 1, fontSize: 15, color: tct('#1A1A1A'), paddingVertical: 10 },
+  option: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: tc('#F4F4F4') },
+  optionSelected: { backgroundColor: tc('#FFF1EA') },
+  optionText: { flex: 1, fontSize: 15, color: tct('#333') },
+  optionTextSelected: { color: tct('#FF4500'), fontWeight: 'bold' },
+  optionHint: { fontSize: 12, color: tct('#999'), marginRight: 8 },
+  empty: { textAlign: 'center', color: tct('#999'), padding: 24 },
+}));

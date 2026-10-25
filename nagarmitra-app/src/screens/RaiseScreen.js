@@ -9,6 +9,7 @@ import LocationPicker from '../components/LocationPicker';
 import { useSession, departmentName } from '../context/SessionContext';
 import { placeLabel } from '../data/india';
 
+import { tc, tct, themedStyles } from '../theme';
 const MAX_IMAGES = 3;
 const MIN_DESCRIPTION = 10;
 
@@ -194,7 +195,7 @@ export default function RaiseScreen({ navigation }) {
                     onPress={() => removeImage(index)} 
                     style={styles.removeImageButton}
                   >
-                    <Ionicons name="close-circle" size={20} color="#DC3545" />
+                    <Ionicons name="close-circle" size={20} color={tct('#DC3545')} />
                   </TouchableOpacity>
                 </View>
               )}
@@ -205,11 +206,11 @@ export default function RaiseScreen({ navigation }) {
           {/* Photo Action Buttons */}
           <View style={styles.photoActions}>
             <TouchableOpacity onPress={takePhoto} style={styles.photoActionButton}>
-              <Ionicons name="camera" size={20} color="#FF4500" />
+              <Ionicons name="camera" size={20} color={tct('#FF4500')} />
               <Text style={styles.photoActionText}>Take Photo</Text>
             </TouchableOpacity>
             <TouchableOpacity onPress={pickImage} style={styles.photoActionButton}>
-              <Ionicons name="images" size={20} color="#FF4500" />
+              <Ionicons name="images" size={20} color={tct('#FF4500')} />
               <Text style={styles.photoActionText}>Gallery</Text>
             </TouchableOpacity>
           </View>
@@ -227,7 +228,7 @@ export default function RaiseScreen({ navigation }) {
               maxLength={1000}
               textAlignVertical="top"
               style={styles.descriptionInput}
-              placeholderTextColor="#999"
+              placeholderTextColor={tc('#999')}
             />
             
             <Text style={[styles.charCount, description.trim().length < MIN_DESCRIPTION && styles.charCountLow]}>
@@ -245,7 +246,7 @@ export default function RaiseScreen({ navigation }) {
             onChangeText={setAddress}
             placeholder="Street, area or landmark (optional)"
             style={[styles.locationInput, styles.addressInput]}
-            placeholderTextColor="#999"
+            placeholderTextColor={tc('#999')}
           />
           {coords && (
             <Text style={styles.coordsText}>
@@ -254,7 +255,7 @@ export default function RaiseScreen({ navigation }) {
           )}
           {place.district && (
             <View style={styles.routeBox}>
-              <Ionicons name="git-branch-outline" size={16} color="#2E7D32" />
+              <Ionicons name="git-branch-outline" size={16} color={tct('#2E7D32')} />
               <Text style={styles.routeText}>
                 Will be sent to the {departmentName(meta, meta.categoryToDepartment?.[category]) || 'concerned'} officer of {placeLabel(place.state, place.district)}
               </Text>
@@ -270,20 +271,20 @@ export default function RaiseScreen({ navigation }) {
             style={styles.categorySelector}
           >
             <Text style={styles.categoryText}>{category}</Text>
-            <Ionicons name="chevron-down" size={20} color="#666" />
+            <Ionicons name="chevron-down" size={20} color={tct('#666')} />
           </TouchableOpacity>
           
           {/* AI Detection feedback */}
           {detectingCategory && (
             <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 8 }}>
-              <ActivityIndicator size="small" color="#FF4500" />
-              <Text style={{ marginLeft: 8, color: '#666', fontSize: 13 }}>AI is analyzing your image...</Text>
+              <ActivityIndicator size="small" color={tct('#FF4500')} />
+              <Text style={{ marginLeft: 8, color: tct('#666'), fontSize: 13 }}>AI is analyzing your image...</Text>
             </View>
           )}
           {!detectingCategory && detectedConfidence !== null && (
             <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 8 }}>
-              <Ionicons name="sparkles" size={16} color="#28A745" />
-              <Text style={{ marginLeft: 6, color: '#28A745', fontSize: 13, fontWeight: '500' }}>
+              <Ionicons name="sparkles" size={16} color={tct('#28A745')} />
+              <Text style={{ marginLeft: 6, color: tct('#28A745'), fontSize: 13, fontWeight: '500' }}>
                 AI Detected: {category} ({Math.round(detectedConfidence * 100)}% confidence)
               </Text>
             </View>
@@ -302,11 +303,11 @@ export default function RaiseScreen({ navigation }) {
               <Ionicons 
                 name={priority === 'Critical' ? 'alert' : priority === 'High' ? 'warning' : priority === 'Medium' ? 'information-circle' : 'checkmark-circle'} 
                 size={20} 
-                color={priority === 'Critical' ? '#DC3545' : priority === 'High' ? '#FFC107' : priority === 'Medium' ? '#FF4500' : '#28A745'} 
+                color={priority === 'Critical' ? tc('#DC3545') : priority === 'High' ? tc('#FFC107') : priority === 'Medium' ? tc('#FF4500') : tc('#28A745')} 
               />
-              <Text style={[styles.categoryText, { color: priority === 'Critical' ? '#DC3545' : priority === 'High' ? '#FFC107' : priority === 'Medium' ? '#FF4500' : '#28A745' }]}>{priority}</Text>
+              <Text style={[styles.categoryText, { color: priority === 'Critical' ? tc('#DC3545') : priority === 'High' ? tc('#FFC107') : priority === 'Medium' ? tc('#FF4500') : tc('#28A745') }]}>{priority}</Text>
             </View>
-            <Ionicons name="chevron-down" size={20} color="#666" />
+            <Ionicons name="chevron-down" size={20} color={tct('#666')} />
           </TouchableOpacity>
         </View>
 
@@ -332,7 +333,7 @@ export default function RaiseScreen({ navigation }) {
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Select Category</Text>
               <TouchableOpacity onPress={() => setShowCategoryPicker(false)}>
-                <Ionicons name="close" size={24} color="#666" />
+                <Ionicons name="close" size={24} color={tct('#666')} />
               </TouchableOpacity>
             </View>
             <FlatList
@@ -349,7 +350,7 @@ export default function RaiseScreen({ navigation }) {
                     {item}
                   </Text>
                   {item === category && (
-                    <Ionicons name="checkmark" size={20} color="#FF4500" />
+                    <Ionicons name="checkmark" size={20} color={tct('#FF4500')} />
                   )}
                 </TouchableOpacity>
               )}
@@ -366,7 +367,7 @@ export default function RaiseScreen({ navigation }) {
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Select Priority</Text>
               <TouchableOpacity onPress={() => setShowPriorityPicker(false)}>
-                <Ionicons name="close" size={24} color="#666" />
+                <Ionicons name="close" size={24} color={tct('#666')} />
               </TouchableOpacity>
             </View>
             <FlatList
@@ -383,14 +384,14 @@ export default function RaiseScreen({ navigation }) {
                     <Ionicons 
                       name={item === 'Critical' ? 'alert' : item === 'High' ? 'warning' : item === 'Medium' ? 'information-circle' : 'checkmark-circle'} 
                       size={20} 
-                      color={item === 'Critical' ? '#DC3545' : item === 'High' ? '#FFC107' : item === 'Medium' ? '#FF4500' : '#28A745'} 
+                      color={item === 'Critical' ? tc('#DC3545') : item === 'High' ? tc('#FFC107') : item === 'Medium' ? tc('#FF4500') : tc('#28A745')} 
                     />
                     <Text style={[styles.categoryOptionText, item === priority && styles.categoryOptionTextSelected]}>
                       {item}
                     </Text>
                   </View>
                   {item === priority && (
-                    <Ionicons name="checkmark" size={20} color="#FF4500" />
+                    <Ionicons name="checkmark" size={20} color={tct('#FF4500')} />
                   )}
                 </TouchableOpacity>
               )}
@@ -404,7 +405,7 @@ export default function RaiseScreen({ navigation }) {
       <Modal visible={showSuccessModal} transparent animationType="fade" onRequestClose={() => setShowSuccessModal(false)}>
         <View style={styles.modalOverlay}>
           <View style={styles.successModal}>
-            <Ionicons name="checkmark-circle" size={60} color="#28A745" />
+            <Ionicons name="checkmark-circle" size={60} color={tct('#28A745')} />
             <Text style={styles.successTitle}>Report Submitted Successfully!</Text>
             <Text style={styles.successText} selectable>Your report ID: {reportId}</Text>
             <Text style={styles.successSubtext}>You can track the status of your complaint using this ID</Text>
@@ -432,10 +433,10 @@ export default function RaiseScreen({ navigation }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFF',
+    backgroundColor: tc('#FFF'),
   },
   scrollView: {
     flex: 1,
@@ -451,7 +452,7 @@ const styles = StyleSheet.create({
     paddingTop: 20,
     paddingBottom: 15,
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
+    borderBottomColor: tc('#F0F0F0'),
   },
   backButton: {
     padding: 8,
@@ -459,7 +460,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#000',
+    color: tct('#000'),
   },
   placeholder: {
     width: 40,
@@ -472,12 +473,12 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#000',
+    color: tct('#000'),
     marginBottom: 5,
   },
   sectionSubtitle: {
     fontSize: 14,
-    color: '#666',
+    color: tct('#666'),
     marginBottom: 15,
   },
   imageContainer: {
@@ -488,20 +489,20 @@ const styles = StyleSheet.create({
     width: 100,
     height: 100,
     borderRadius: 8,
-    backgroundColor: '#F0F0F0',
+    backgroundColor: tc('#F0F0F0'),
   },
   removeImageButton: {
     position: 'absolute',
     top: -8,
     right: -8,
-    backgroundColor: '#FFF',
+    backgroundColor: tc('#FFF'),
     borderRadius: 10,
   },
   imageStatus: {
     position: 'absolute',
     bottom: 4,
     right: 4,
-    backgroundColor: '#FFF',
+    backgroundColor: tc('#FFF'),
     borderRadius: 8,
     padding: 2,
   },
@@ -515,24 +516,24 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FFF5F0',
+    backgroundColor: tc('#FFF5F0'),
     paddingVertical: 12,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#FF4500',
+    borderColor: tc('#FF4500'),
     gap: 6,
   },
   photoActionText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#FF4500',
+    color: tct('#FF4500'),
   },
   uploadButton: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FF4500',
+    backgroundColor: tc('#FF4500'),
     paddingVertical: 12,
     borderRadius: 8,
     gap: 6,
@@ -544,21 +545,21 @@ const styles = StyleSheet.create({
   },
   descriptionContainer: {
     borderWidth: 1,
-    borderColor: '#DDD',
+    borderColor: tc('#DDD'),
     borderRadius: 8,
-    backgroundColor: '#FFF',
+    backgroundColor: tc('#FFF'),
   },
   charCount: {
     fontSize: 12,
-    color: '#28A745',
+    color: tct('#28A745'),
     textAlign: 'right',
     marginTop: 6,
   },
   charCountLow: {
-    color: '#999',
+    color: tct('#999'),
   },
   descriptionInput: {
-    color: '#1A1A1A',
+    color: tct('#1A1A1A'),
     padding: 15,
     fontSize: 16,
     minHeight: 100,
@@ -570,7 +571,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 15,
     paddingVertical: 10,
     borderTopWidth: 1,
-    borderTopColor: '#F0F0F0',
+    borderTopColor: tc('#F0F0F0'),
     gap: 10,
   },
   voiceButton: {
@@ -579,28 +580,28 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 6,
-    backgroundColor: '#FFF5F0',
+    backgroundColor: tc('#FFF5F0'),
     borderWidth: 1,
-    borderColor: '#FF4500',
+    borderColor: tc('#FF4500'),
     gap: 6,
   },
   voiceButtonRecording: {
-    backgroundColor: '#FFF5F5',
-    borderColor: '#DC3545',
+    backgroundColor: tc('#FFF5F5'),
+    borderColor: tc('#DC3545'),
   },
   voiceButtonText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#FF4500',
+    color: tct('#FF4500'),
   },
   voiceButtonTextRecording: {
-    color: '#DC3545',
+    color: tct('#DC3545'),
   },
   voiceNoteContainer: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F8F9FA',
+    backgroundColor: tc('#F8F9FA'),
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 6,
@@ -612,7 +613,7 @@ const styles = StyleSheet.create({
   voiceNoteText: {
     flex: 1,
     fontSize: 14,
-    color: '#666',
+    color: tct('#666'),
   },
   deleteVoiceButton: {
     padding: 4,
@@ -620,7 +621,7 @@ const styles = StyleSheet.create({
   uploadVoiceButton: {
     paddingHorizontal: 8,
     paddingVertical: 4,
-    backgroundColor: '#FF4500',
+    backgroundColor: tc('#FF4500'),
     borderRadius: 4,
   },
   uploadVoiceText: {
@@ -632,12 +633,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#DDD',
+    borderColor: tc('#DDD'),
     borderRadius: 8,
-    backgroundColor: '#FFF',
+    backgroundColor: tc('#FFF'),
   },
   locationInput: {
-    color: '#1A1A1A',
+    color: tct('#1A1A1A'),
     flex: 1,
     padding: 15,
     fontSize: 16,
@@ -645,12 +646,12 @@ const styles = StyleSheet.create({
   locationButton: {
     padding: 15,
     borderLeftWidth: 1,
-    borderLeftColor: '#F0F0F0',
+    borderLeftColor: tc('#F0F0F0'),
   },
   addressInput: {
     flex: 0,
     borderWidth: 1,
-    borderColor: '#DDD',
+    borderColor: tc('#DDD'),
     borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 10,
@@ -660,20 +661,20 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: '#EEF6EE',
+    backgroundColor: tc('#EEF6EE'),
     padding: 10,
     borderRadius: 8,
     marginTop: 10,
   },
   routeText: {
     flex: 1,
-    color: '#2E7D32',
+    color: tct('#2E7D32'),
     fontSize: 13,
     fontWeight: '600',
   },
   coordsText: {
     fontSize: 12,
-    color: '#28A745',
+    color: tct('#28A745'),
     marginTop: 8,
     fontFamily: 'monospace',
   },
@@ -682,15 +683,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     borderWidth: 1,
-    borderColor: '#DDD',
+    borderColor: tc('#DDD'),
     borderRadius: 8,
-    backgroundColor: '#FFF',
+    backgroundColor: tc('#FFF'),
     paddingHorizontal: 15,
     paddingVertical: 15,
   },
   categoryText: {
     fontSize: 16,
-    color: '#000',
+    color: tct('#000'),
   },
   priorityContainer: {
     flexDirection: 'row',
@@ -703,7 +704,7 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   submitButton: {
-    backgroundColor: '#FF4500',
+    backgroundColor: tc('#FF4500'),
     marginHorizontal: 20,
     marginTop: 30,
     paddingVertical: 16,
@@ -711,7 +712,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   submitButtonDisabled: {
-    backgroundColor: '#CCC',
+    backgroundColor: tc('#CCC'),
   },
   submitButtonText: {
     fontSize: 18,
@@ -725,7 +726,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   modalContainer: {
-    backgroundColor: '#FFF',
+    backgroundColor: tc('#FFF'),
     borderRadius: 12,
     margin: 20,
     maxHeight: '70%',
@@ -737,12 +738,12 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
+    borderBottomColor: tc('#F0F0F0'),
   },
   modalTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#000',
+    color: tct('#000'),
   },
   categoryOption: {
     flexDirection: 'row',
@@ -751,21 +752,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 15,
     borderBottomWidth: 1,
-    borderBottomColor: '#F8F9FA',
+    borderBottomColor: tc('#F8F9FA'),
   },
   categoryOptionSelected: {
-    backgroundColor: '#FFF5F0',
+    backgroundColor: tc('#FFF5F0'),
   },
   categoryOptionText: {
     fontSize: 16,
-    color: '#000',
+    color: tct('#000'),
   },
   categoryOptionTextSelected: {
-    color: '#FF4500',
+    color: tct('#FF4500'),
     fontWeight: '600',
   },
   successModal: {
-    backgroundColor: '#FFF',
+    backgroundColor: tc('#FFF'),
     borderRadius: 12,
     padding: 30,
     alignItems: 'center',
@@ -774,20 +775,20 @@ const styles = StyleSheet.create({
   successTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#000',
+    color: tct('#000'),
     marginTop: 15,
     marginBottom: 10,
     textAlign: 'center',
   },
   successText: {
     fontSize: 16,
-    color: '#FF4500',
+    color: tct('#FF4500'),
     fontWeight: '600',
     marginBottom: 5,
   },
   successSubtext: {
     fontSize: 14,
-    color: '#666',
+    color: tct('#666'),
     textAlign: 'center',
     marginBottom: 25,
   },
@@ -796,7 +797,7 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   successButton: {
-    backgroundColor: '#FF4500',
+    backgroundColor: tc('#FF4500'),
     paddingHorizontal: 20,
     paddingVertical: 12,
     borderRadius: 8,
@@ -807,14 +808,14 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   successButtonSecondary: {
-    backgroundColor: '#F0F0F0',
+    backgroundColor: tc('#F0F0F0'),
     paddingHorizontal: 20,
     paddingVertical: 12,
     borderRadius: 8,
   },
   successButtonSecondaryText: {
-    color: '#666',
+    color: tct('#666'),
     fontWeight: '600',
     fontSize: 16,
   },
-});
+}));

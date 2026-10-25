@@ -9,14 +9,15 @@ import ComplaintCard from '../components/ComplaintCard';
 import { useSession } from '../context/SessionContext';
 import { placeLabel } from '../data/india';
 
+import { tc, tct, themedStyles } from '../theme';
 // Status color mapping
 const getStatusColor = (status) => {
   switch (status) {
-    case 'submitted': return '#DC3545';
-    case 'acknowledged': return '#FFC107';
-    case 'in_progress': return '#007BFF';
-    case 'resolved': return '#28A745';
-    default: return '#6C757D';
+    case 'submitted': return tc('#DC3545');
+    case 'acknowledged': return tc('#FFC107');
+    case 'in_progress': return tc('#007BFF');
+    case 'resolved': return tc('#28A745');
+    default: return tc('#6C757D');
   }
 };
 
@@ -84,7 +85,9 @@ export default function DashboardScreen({ navigation }) {
   const [onlyMine, setOnlyMine] = useState(false);
   const [statusFilter, setStatusFilter] = useState('');
   const [counts, setCounts] = useState({ all: 0, mine: 0, resolved: 0, inProgress: 0 });
-  const [showMap, setShowMap] = useState(true);
+  // The map (a WebView) loads on demand so the Dashboard opens instantly and
+  // can never be taken down by the WebView on phones where it misbehaves
+  const [showMap, setShowMap] = useState(false);
   const [heatmapMode, setHeatmapMode] = useState('markers'); // 'heatmap' | 'markers'
   const [userLocation, setUserLocation] = useState(null);
 
@@ -201,13 +204,13 @@ export default function DashboardScreen({ navigation }) {
       <ScrollView
         style={styles.scrollView}
         keyboardShouldPersistTaps="handled"
-        refreshControl={<RefreshControl refreshing={loading && items.length > 0} onRefresh={refreshAll} colors={['#FF4500']} />}
+        refreshControl={<RefreshControl refreshing={loading && items.length > 0} onRefresh={refreshAll} colors={[tc('#FF4500')]} />}
       >
         {/* Header */}
         <View style={styles.header}>
           <Text style={styles.headerTitle}>Dashboard</Text>
           <TouchableOpacity onPress={() => setShowMap(!showMap)} style={styles.toggleButton}>
-            <Ionicons name={showMap ? 'list' : 'map'} size={20} color="#FF4500" />
+            <Ionicons name={showMap ? 'list' : 'map'} size={20} color={tct('#FF4500')} />
             <Text style={styles.toggleText}>{showMap ? 'Hide map' : 'Show map'}</Text>
           </TouchableOpacity>
         </View>
@@ -229,13 +232,13 @@ export default function DashboardScreen({ navigation }) {
 
         {/* Statistics Tiles */}
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.statsContainer}>
-          <StatsTile title="All Issues" count={counts.all} icon="apps" color="#666"
+          <StatsTile title="All Issues" count={counts.all} icon="apps" color={tct('#666')}
             active={!onlyMine && !statusFilter} onPress={() => selectFilter(false, '')} />
-          <StatsTile title="My Reports" count={counts.mine} icon="person" color="#007BFF"
+          <StatsTile title="My Reports" count={counts.mine} icon="person" color={tct('#007BFF')}
             active={onlyMine} onPress={() => selectFilter(true, '')} />
-          <StatsTile title="Resolved" count={counts.resolved} icon="checkmark-circle" color="#28A745"
+          <StatsTile title="Resolved" count={counts.resolved} icon="checkmark-circle" color={tct('#28A745')}
             active={statusFilter === 'done'} onPress={() => selectFilter(false, 'done')} />
-          <StatsTile title="In Progress" count={counts.inProgress} icon="construct" color="#FFC107"
+          <StatsTile title="In Progress" count={counts.inProgress} icon="construct" color={tct('#FFC107')}
             active={statusFilter === 'in_progress'} onPress={() => selectFilter(false, 'in_progress')} />
         </ScrollView>
 
@@ -247,7 +250,7 @@ export default function DashboardScreen({ navigation }) {
               <View style={styles.mapControls}>
                 {['markers', 'heatmap'].map((m) => (
                   <TouchableOpacity key={m} onPress={() => setHeatmapMode(m)} style={styles.heatmapToggle}>
-                    <Ionicons name={heatmapMode === m ? 'radio-button-on' : 'radio-button-off'} size={16} color="#FF4500" />
+                    <Ionicons name={heatmapMode === m ? 'radio-button-on' : 'radio-button-off'} size={16} color={tct('#FF4500')} />
                     <Text style={styles.toggleLabel}>{m === 'markers' ? 'Markers' : 'Heatmap'}</Text>
                   </TouchableOpacity>
                 ))}
@@ -279,7 +282,7 @@ export default function DashboardScreen({ navigation }) {
               onChangeText={(t) => { setReportId(t); if (lookup) setLookup(null); }}
               placeholder="Report ID, e.g. NM-GJ-20261025-0001"
               style={styles.searchInput}
-              placeholderTextColor="#999"
+              placeholderTextColor={tc('#999')}
               autoCapitalize="characters"
               autoCorrect={false}
               returnKeyType="search"
@@ -294,13 +297,13 @@ export default function DashboardScreen({ navigation }) {
             <View style={styles.lookupResult}>
               {lookup.error ? (
                 <View style={styles.errorContainer}>
-                  <Ionicons name="alert-circle" size={20} color="#DC3545" />
+                  <Ionicons name="alert-circle" size={20} color={tct('#DC3545')} />
                   <Text style={styles.errorText}>{lookup.error}</Text>
                 </View>
               ) : (
                 <View style={styles.reportCard}>
                   <View style={styles.reportHeader}>
-                    <Ionicons name={getCategoryIcon(lookup.category)} size={24} color="#FF4500" />
+                    <Ionicons name={getCategoryIcon(lookup.category)} size={24} color={tct('#FF4500')} />
                     <View style={styles.reportInfo}>
                       <Text style={styles.reportCategory}>{lookup.category}</Text>
                       <Text style={styles.reportId}>ID: {lookup.reportId}</Text>
@@ -328,17 +331,17 @@ export default function DashboardScreen({ navigation }) {
               <Switch
                 value={onlyMine}
                 onValueChange={(v) => setOnlyMine(v)}
-                trackColor={{ false: '#DDD', true: '#FFB08A' }}
-                thumbColor={onlyMine ? '#FF4500' : '#F4F4F4'}
+                trackColor={{ false: tc('#DDD'), true: tc('#FFB08A') }}
+                thumbColor={onlyMine ? tc('#FF4500') : '#F4F4F4'}
               />
             </View>
           </View>
 
           {loading && items.length === 0 ? (
-            <ActivityIndicator color="#FF4500" style={{ marginVertical: 24 }} />
+            <ActivityIndicator color={tct('#FF4500')} style={{ marginVertical: 24 }} />
           ) : listError ? (
             <View style={styles.emptyContainer}>
-              <Ionicons name="cloud-offline-outline" size={48} color="#DDD" />
+              <Ionicons name="cloud-offline-outline" size={48} color={tct('#DDD')} />
               <Text style={styles.emptyText}>{listError}</Text>
               <TouchableOpacity onPress={refreshAll} style={styles.retryButton}>
                 <Text style={styles.retryText}>Try again</Text>
@@ -346,7 +349,7 @@ export default function DashboardScreen({ navigation }) {
             </View>
           ) : items.length === 0 ? (
             <View style={styles.emptyContainer}>
-              <Ionicons name="document-text" size={48} color="#DDD" />
+              <Ionicons name="document-text" size={48} color={tct('#DDD')} />
               <Text style={styles.emptyText}>{onlyMine ? "You haven't reported any issues yet" : 'No issues found'}</Text>
               <Text style={styles.emptySubtext}>{onlyMine ? 'Use the Raise tab to report one.' : 'Try another filter.'}</Text>
             </View>
@@ -362,7 +365,7 @@ export default function DashboardScreen({ navigation }) {
         </View>
 
         <TouchableOpacity onPress={refreshAll} style={styles.refreshButton} disabled={loading}>
-          <Ionicons name="refresh" size={20} color="#FF4500" />
+          <Ionicons name="refresh" size={20} color={tct('#FF4500')} />
           <Text style={styles.refreshText}>{loading ? 'Refreshing...' : 'Refresh Data'}</Text>
         </TouchableOpacity>
       </ScrollView>
@@ -370,13 +373,13 @@ export default function DashboardScreen({ navigation }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => StyleSheet.create({
   areaRow: {
     flexDirection: 'row',
     gap: 8,
     paddingHorizontal: 16,
     paddingTop: 12,
-    backgroundColor: '#FFF'
+    backgroundColor: tc('#FFF')
   },
   areaChip: {
     flexShrink: 1,
@@ -384,15 +387,15 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: '#E0E0E0'
+    borderColor: tc('#E0E0E0')
   },
   areaChipActive: {
-    backgroundColor: '#FF4500',
-    borderColor: '#FF4500'
+    backgroundColor: tc('#FF4500'),
+    borderColor: tc('#FF4500')
   },
   areaText: {
     fontSize: 13,
-    color: '#555',
+    color: tct('#555'),
     fontWeight: '600'
   },
   areaTextActive: {
@@ -400,7 +403,7 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-    backgroundColor: '#F8F9FA'
+    backgroundColor: tc('#F8F9FA')
   },
   scrollView: {
     flex: 1
@@ -411,57 +414,57 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 16,
-    backgroundColor: '#FFF',
+    backgroundColor: tc('#FFF'),
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E5E5'
+    borderBottomColor: tc('#E5E5E5')
   },
   headerTitle: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#333'
+    color: tct('#333')
   },
   toggleButton: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 12,
     paddingVertical: 6,
-    backgroundColor: '#FFF5F0',
+    backgroundColor: tc('#FFF5F0'),
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#FF4500'
+    borderColor: tc('#FF4500')
   },
   toggleText: {
     marginLeft: 4,
     fontSize: 14,
     fontWeight: '600',
-    color: '#FF4500'
+    color: tct('#FF4500')
   },
   statsContainer: {
     flexGrow: 0,
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: '#FFF',
+    backgroundColor: tc('#FFF'),
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E5E5'
+    borderBottomColor: tc('#E5E5E5')
   },
   statsTile: {
     width: 120,
     padding: 16,
     marginRight: 12,
-    backgroundColor: '#FFF',
+    backgroundColor: tc('#FFF'),
     borderRadius: 12,
     alignItems: 'center',
     elevation: 2,
-    shadowColor: '#000',
+    shadowColor: tc('#000'),
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
     borderWidth: 1,
-    borderColor: '#F0F0F0'
+    borderColor: tc('#F0F0F0')
   },
   statsTileActive: {
-    backgroundColor: '#FF4500',
-    borderColor: '#FF4500'
+    backgroundColor: tc('#FF4500'),
+    borderColor: tc('#FF4500')
   },
   statsIcon: {
     width: 36,
@@ -474,7 +477,7 @@ const styles = StyleSheet.create({
   statsCount: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#333',
+    color: tct('#333'),
     marginBottom: 4
   },
   statsCountActive: {
@@ -482,19 +485,19 @@ const styles = StyleSheet.create({
   },
   statsTitle: {
     fontSize: 12,
-    color: '#666',
+    color: tct('#666'),
     textAlign: 'center'
   },
   statsTitleActive: {
     color: '#FFF'
   },
   mapSection: {
-    backgroundColor: '#FFF',
+    backgroundColor: tc('#FFF'),
     margin: 16,
     borderRadius: 12,
     padding: 16,
     elevation: 2,
-    shadowColor: '#000',
+    shadowColor: tc('#000'),
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4
@@ -508,7 +511,7 @@ const styles = StyleSheet.create({
   mapTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#333',
+    color: tct('#333'),
     flex: 1
   },
   mapControls: {
@@ -525,7 +528,7 @@ const styles = StyleSheet.create({
   },
   toggleLabel: {
     fontSize: 12,
-    color: '#FF4500',
+    color: tct('#FF4500'),
     fontWeight: '500'
   },
   legendContainer: {
@@ -547,11 +550,11 @@ const styles = StyleSheet.create({
   },
   legendText: {
     fontSize: 10,
-    color: '#666'
+    color: tct('#666')
   },
   mapHint: {
     fontSize: 12,
-    color: '#888',
+    color: tct('#888'),
     textAlign: 'center',
     marginTop: 8
   },
@@ -562,21 +565,21 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: '#FFF',
+    borderColor: tc('#FFF'),
     position: 'relative'
   },
   clusterBadge: {
     position: 'absolute',
     top: -5,
     right: -5,
-    backgroundColor: '#FF4500',
+    backgroundColor: tc('#FF4500'),
     borderRadius: 10,
     minWidth: 16,
     height: 16,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#FFF'
+    borderColor: tc('#FFF')
   },
   clusterText: {
     fontSize: 10,
@@ -584,12 +587,12 @@ const styles = StyleSheet.create({
     fontWeight: 'bold'
   },
   searchSection: {
-    backgroundColor: '#FFF',
+    backgroundColor: tc('#FFF'),
     margin: 16,
     borderRadius: 12,
     padding: 16,
     elevation: 2,
-    shadowColor: '#000',
+    shadowColor: tc('#000'),
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4
@@ -597,7 +600,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#333',
+    color: tct('#333'),
     marginBottom: 12
   },
   searchContainer: {
@@ -607,17 +610,17 @@ const styles = StyleSheet.create({
   },
   searchInput: {
     flex: 1,
-    color: '#1A1A1A',
+    color: tct('#1A1A1A'),
     borderWidth: 1,
-    borderColor: '#DDD',
+    borderColor: tc('#DDD'),
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: 16,
-    backgroundColor: '#F8F9FA'
+    backgroundColor: tc('#F8F9FA')
   },
   searchButton: {
-    backgroundColor: '#FF4500',
+    backgroundColor: tc('#FF4500'),
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 8,
@@ -631,22 +634,22 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     padding: 12,
-    backgroundColor: '#FFEBEE',
+    backgroundColor: tc('#FFEBEE'),
     borderRadius: 8,
     gap: 8
   },
   errorText: {
     flex: 1,
-    color: '#DC3545',
+    color: tct('#DC3545'),
     fontSize: 14,
     fontWeight: '500'
   },
   reportCard: {
-    backgroundColor: '#F8F9FA',
+    backgroundColor: tc('#F8F9FA'),
     padding: 16,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#E5E5E5'
+    borderColor: tc('#E5E5E5')
   },
   reportHeader: {
     flexDirection: 'row',
@@ -660,11 +663,11 @@ const styles = StyleSheet.create({
   reportCategory: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#333'
+    color: tct('#333')
   },
   reportId: {
     fontSize: 12,
-    color: '#666',
+    color: tct('#666'),
     fontFamily: 'monospace'
   },
   statusBadge: {
@@ -680,21 +683,21 @@ const styles = StyleSheet.create({
   },
   reportDescription: {
     fontSize: 14,
-    color: '#333',
+    color: tct('#333'),
     marginBottom: 8,
     lineHeight: 20
   },
   reportDate: {
     fontSize: 12,
-    color: '#666'
+    color: tct('#666')
   },
   issuesSection: {
-    backgroundColor: '#FFF',
+    backgroundColor: tc('#FFF'),
     margin: 16,
     borderRadius: 12,
     padding: 16,
     elevation: 2,
-    shadowColor: '#000',
+    shadowColor: tc('#000'),
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4
@@ -712,28 +715,28 @@ const styles = StyleSheet.create({
   },
   filterLabel: {
     fontSize: 14,
-    color: '#666'
+    color: tct('#666')
   },
   warningContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 12,
-    backgroundColor: '#FFEBEE',
+    backgroundColor: tc('#FFEBEE'),
     borderRadius: 8,
     marginBottom: 12,
     gap: 8
   },
   warningText: {
-    color: '#DC3545',
+    color: tct('#DC3545'),
     fontSize: 14
   },
   issueCard: {
-    backgroundColor: '#F8F9FA',
+    backgroundColor: tc('#F8F9FA'),
     borderRadius: 8,
     padding: 12,
     marginBottom: 8,
     borderWidth: 1,
-    borderColor: '#E5E5E5'
+    borderColor: tc('#E5E5E5')
   },
   issueHeader: {
     flexDirection: 'row',
@@ -744,7 +747,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: '#FFF5F0',
+    backgroundColor: tc('#FFF5F0'),
     justifyContent: 'center',
     alignItems: 'center'
   },
@@ -755,11 +758,11 @@ const styles = StyleSheet.create({
   issueTitle: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#333'
+    color: tct('#333')
   },
   issueDate: {
     fontSize: 12,
-    color: '#666'
+    color: tct('#666')
   },
   issueStatus: {
     paddingHorizontal: 8,
@@ -774,7 +777,7 @@ const styles = StyleSheet.create({
   },
   issueDescription: {
     fontSize: 14,
-    color: '#666',
+    color: tct('#666'),
     lineHeight: 20,
     marginBottom: 8
   },
@@ -785,7 +788,7 @@ const styles = StyleSheet.create({
   },
   issueId: {
     fontSize: 12,
-    color: '#666',
+    color: tct('#666'),
     fontFamily: 'monospace'
   },
   locationInfo: {
@@ -795,7 +798,7 @@ const styles = StyleSheet.create({
   },
   locationText: {
     fontSize: 12,
-    color: '#666',
+    color: tct('#666'),
     maxWidth: 140
   },
   retryButton: {
@@ -804,10 +807,10 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#FF4500'
+    borderColor: tc('#FF4500')
   },
   retryText: {
-    color: '#FF4500',
+    color: tct('#FF4500'),
     fontWeight: '600'
   },
   emptyContainer: {
@@ -817,33 +820,33 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#999',
+    color: tct('#999'),
     marginTop: 12,
     textAlign: 'center'
   },
   emptySubtext: {
     fontSize: 14,
-    color: '#CCC',
+    color: tct('#CCC'),
     marginTop: 4
   },
   refreshButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FFF',
+    backgroundColor: tc('#FFF'),
     margin: 16,
     paddingVertical: 12,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#FF4500',
+    borderColor: tc('#FF4500'),
     gap: 8
   },
   refreshText: {
-    color: '#FF4500',
+    color: tct('#FF4500'),
     fontSize: 16,
     fontWeight: '600'
   }
-});
+}));
 
 // Tile Component
 const StatsTile = ({ title, count, icon, color, active, onPress }) => (

@@ -18,6 +18,7 @@ import { toCompressedDataUri } from '../utils/image';
 import LocationPicker from '../components/LocationPicker';
 import { useSession, roleLabel, jurisdictionLabel } from '../context/SessionContext';
 
+import { tc, tct, themedStyles } from '../theme';
 const emptyProfile = () => ({
   displayName: auth.currentUser?.displayName || '',
   email: auth.currentUser?.email || '',
@@ -130,7 +131,7 @@ const ProfileScreen = ({ navigation }) => {
   if (initialLoading) {
     return (
       <View style={[styles.container, { alignItems: 'center', justifyContent: 'center' }]}>
-        <ActivityIndicator size="large" color="#FF4500" />
+        <ActivityIndicator size="large" color={tct('#FF4500')} />
       </View>
     );
   }
@@ -140,7 +141,7 @@ const ProfileScreen = ({ navigation }) => {
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => (isEditing ? handleCancel() : navigation.goBack())}>
-          <Ionicons name="arrow-back" size={24} color="#FF4500" />
+          <Ionicons name="arrow-back" size={24} color={tct('#FF4500')} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>My Profile</Text>
         <TouchableOpacity
@@ -163,7 +164,7 @@ const ProfileScreen = ({ navigation }) => {
             <Image source={{ uri: profileData.photoURL }} style={styles.profilePicture} />
           ) : (
             <View style={styles.defaultProfilePicture}>
-              <Ionicons name="person" size={40} color="#FF4500" />
+              <Ionicons name="person" size={40} color={tct('#FF4500')} />
             </View>
           )}
           {isEditing && (
@@ -180,7 +181,7 @@ const ProfileScreen = ({ navigation }) => {
         <View style={styles.inputGroup}>
           <Text style={styles.label}>Full Name</Text>
           <TextInput
-            placeholderTextColor="#9A9A9A"
+            placeholderTextColor={tc('#9A9A9A')}
             style={[styles.input, isEditing && styles.inputEditable]}
             value={profileData.displayName}
             onChangeText={(text) => setProfileData(prev => ({ ...prev, displayName: text }))}
@@ -193,7 +194,7 @@ const ProfileScreen = ({ navigation }) => {
         <View style={styles.inputGroup}>
           <Text style={styles.label}>Email</Text>
           <TextInput
-            placeholderTextColor="#9A9A9A"
+            placeholderTextColor={tc('#9A9A9A')}
             style={styles.input}
             value={profileData.email}
             placeholder="No email provided"
@@ -206,7 +207,7 @@ const ProfileScreen = ({ navigation }) => {
         <View style={styles.inputGroup}>
           <Text style={styles.label}>Phone Number</Text>
           <TextInput
-            placeholderTextColor="#9A9A9A"
+            placeholderTextColor={tc('#9A9A9A')}
             style={[styles.input, isEditing && styles.inputEditable]}
             value={profileData.phone}
             onChangeText={(text) => setProfileData(prev => ({ ...prev, phone: text }))}
@@ -222,7 +223,7 @@ const ProfileScreen = ({ navigation }) => {
 
           {!isCitizen && (
             <View style={styles.roleBox}>
-              <Ionicons name="shield-checkmark" size={20} color="#FF4500" />
+              <Ionicons name="shield-checkmark" size={20} color={tct('#FF4500')} />
               <View style={{ flex: 1, marginLeft: 10 }}>
                 <Text style={styles.roleTitle}>{roleLabel(meta, me?.role)}</Text>
                 <Text style={styles.roleSub}>{me?.designation ? `${me.designation} · ` : ''}{jurisdictionLabel(meta, me)}</Text>
@@ -256,7 +257,7 @@ const ProfileScreen = ({ navigation }) => {
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Address</Text>
             <TextInput
-              placeholderTextColor="#9A9A9A"
+              placeholderTextColor={tc('#9A9A9A')}
               style={[styles.input, isEditing && styles.inputEditable]}
               value={profileData.location.address}
               onChangeText={(text) => setProfileData((prev) => ({ ...prev, location: { ...prev.location, address: text } }))}
@@ -293,20 +294,20 @@ const ProfileScreen = ({ navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => StyleSheet.create({
   roleBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFF1EA',
+    backgroundColor: tc('#FFF1EA'),
     borderRadius: 10,
     padding: 12,
     marginBottom: 14,
   },
-  roleTitle: { fontSize: 15, fontWeight: 'bold', color: '#222' },
-  roleSub: { fontSize: 13, color: '#666', marginTop: 2 },
+  roleTitle: { fontSize: 15, fontWeight: 'bold', color: tct('#222') },
+  roleSub: { fontSize: 13, color: tct('#666'), marginTop: 2 },
   container: {
     flex: 1,
-    backgroundColor: '#FFF',
+    backgroundColor: tc('#FFF'),
   },
   header: {
     flexDirection: 'row',
@@ -316,16 +317,16 @@ const styles = StyleSheet.create({
     paddingTop: 20,
     paddingBottom: 15,
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
+    borderBottomColor: tc('#F0F0F0'),
   },
   headerTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#000',
+    color: tct('#000'),
   },
   editButton: {
     fontSize: 16,
-    color: '#FF4500',
+    color: tct('#FF4500'),
     fontWeight: '600',
   },
   profilePictureSection: {
@@ -344,7 +345,7 @@ const styles = StyleSheet.create({
     width: 100,
     height: 100,
     borderRadius: 50,
-    backgroundColor: '#FF450015',
+    backgroundColor: tc('#FF450015'),
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -352,7 +353,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 0,
     right: 0,
-    backgroundColor: '#FF4500',
+    backgroundColor: tc('#FF4500'),
     width: 30,
     height: 30,
     borderRadius: 15,
@@ -368,38 +369,38 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#333',
+    color: tct('#333'),
     marginBottom: 8,
   },
   input: {
     borderWidth: 1,
-    borderColor: '#E0E0E0',
+    borderColor: tc('#E0E0E0'),
     borderRadius: 8,
     paddingHorizontal: 15,
     paddingVertical: 12,
     fontSize: 16,
-    color: '#000',
-    backgroundColor: '#F9F9F9',
+    color: tct('#000'),
+    backgroundColor: tc('#F9F9F9'),
   },
   inputEditable: {
-    backgroundColor: '#FFF',
-    borderColor: '#FF4500',
+    backgroundColor: tc('#FFF'),
+    borderColor: tc('#FF4500'),
   },
   helpText: {
     fontSize: 12,
-    color: '#666',
+    color: tct('#666'),
     marginTop: 5,
   },
   sectionContainer: {
     marginTop: 20,
     paddingTop: 20,
     borderTopWidth: 1,
-    borderTopColor: '#F0F0F0',
+    borderTopColor: tc('#F0F0F0'),
   },
   sectionTitle: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#000',
+    color: tct('#000'),
     marginBottom: 20,
   },
   locationButton: {
@@ -408,12 +409,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: 12,
     borderWidth: 1,
-    borderColor: '#FF4500',
+    borderColor: tc('#FF4500'),
     borderRadius: 8,
     marginTop: 10,
   },
   locationButtonText: {
-    color: '#FF4500',
+    color: tct('#FF4500'),
     marginLeft: 8,
     fontWeight: '600',
   },
@@ -430,23 +431,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   cancelButton: {
-    backgroundColor: '#F8F9FA',
+    backgroundColor: tc('#F8F9FA'),
     borderWidth: 1,
-    borderColor: '#E0E0E0',
+    borderColor: tc('#E0E0E0'),
   },
   cancelButtonText: {
-    color: '#666',
+    color: tct('#666'),
     fontSize: 16,
     fontWeight: '600',
   },
   saveButton: {
-    backgroundColor: '#FF4500',
+    backgroundColor: tc('#FF4500'),
   },
   saveButtonText: {
     color: '#FFF',
     fontSize: 16,
     fontWeight: '600',
   },
-});
+}));
 
 export default ProfileScreen;

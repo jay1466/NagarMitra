@@ -3,17 +3,18 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { placeLabel } from '../data/india';
 
+import { tc, tct, themedStyles } from '../theme';
 export const STATUS = {
-  submitted: { label: 'Submitted', color: '#6C757D', icon: 'paper-plane' },
-  assigned: { label: 'Assigned', color: '#DC3545', icon: 'person' },
-  acknowledged: { label: 'Acknowledged', color: '#FFA000', icon: 'eye' },
-  in_progress: { label: 'In Progress', color: '#007BFF', icon: 'construct' },
-  resolved: { label: 'Resolved', color: '#28A745', icon: 'checkmark-circle' },
-  closed: { label: 'Closed', color: '#1E7E34', icon: 'lock-closed' },
-  rejected: { label: 'Rejected', color: '#8B0000', icon: 'close-circle' },
-  reopened: { label: 'Reopened', color: '#E65100', icon: 'refresh' },
+  submitted: { label: 'Submitted', color: tct('#6C757D'), icon: 'paper-plane' },
+  assigned: { label: 'Assigned', color: tct('#DC3545'), icon: 'person' },
+  acknowledged: { label: 'Acknowledged', color: tct('#FFA000'), icon: 'eye' },
+  in_progress: { label: 'In Progress', color: tct('#007BFF'), icon: 'construct' },
+  resolved: { label: 'Resolved', color: tct('#28A745'), icon: 'checkmark-circle' },
+  closed: { label: 'Closed', color: tct('#1E7E34'), icon: 'lock-closed' },
+  rejected: { label: 'Rejected', color: tct('#8B0000'), icon: 'close-circle' },
+  reopened: { label: 'Reopened', color: tct('#E65100'), icon: 'refresh' },
 };
-export const statusInfo = (s) => STATUS[s] || { label: s || 'Unknown', color: '#6C757D', icon: 'help-circle' };
+export const statusInfo = (s) => STATUS[s] || { label: s || 'Unknown', color: tct('#6C757D'), icon: 'help-circle' };
 
 export const CATEGORY_ICON = {
   Potholes: 'construct',
@@ -57,7 +58,7 @@ export default function ComplaintCard({ item, onPress, showAssignee }) {
     <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.7}>
       <View style={styles.row}>
         <View style={styles.icon}>
-          <Ionicons name={CATEGORY_ICON[item.category] || 'alert-circle'} size={20} color="#FF4500" />
+          <Ionicons name={CATEGORY_ICON[item.category] || 'alert-circle'} size={20} color={tct('#FF4500')} />
         </View>
         <View style={{ flex: 1, marginLeft: 12 }}>
           <Text style={styles.title} numberOfLines={1}>{item.category}</Text>
@@ -72,55 +73,55 @@ export default function ComplaintCard({ item, onPress, showAssignee }) {
         <Text style={styles.id} numberOfLines={1}>{item.reportId}</Text>
         <View style={styles.tags}>
           {item.escalationLevel >= 2 && OPEN.includes(item.status) && (
-            <View style={[styles.tag, { backgroundColor: '#FDECEA' }]}>
-              <Ionicons name="alert" size={11} color="#C62828" />
-              <Text style={[styles.tagText, { color: '#C62828' }]}>Escalated</Text>
+            <View style={[styles.tag, { backgroundColor: tc('#FDECEA') }]}>
+              <Ionicons name="alert" size={11} color={tct('#C62828')} />
+              <Text style={[styles.tagText, { color: tct('#C62828') }]}>Escalated</Text>
             </View>
           )}
           {due && (
-            <View style={[styles.tag, { backgroundColor: due.overdue ? '#FDECEA' : '#EEF6EE' }]}>
-              <Ionicons name="time-outline" size={11} color={due.overdue ? '#C62828' : '#2E7D32'} />
-              <Text style={[styles.tagText, { color: due.overdue ? '#C62828' : '#2E7D32' }]}>{due.text}</Text>
+            <View style={[styles.tag, { backgroundColor: due.overdue ? tc('#FDECEA') : tc('#EEF6EE') }]}>
+              <Ionicons name="time-outline" size={11} color={due.overdue ? tc('#C62828') : tc('#2E7D32')} />
+              <Text style={[styles.tagText, { color: due.overdue ? tc('#C62828') : tc('#2E7D32') }]}>{due.text}</Text>
             </View>
           )}
           {item.priority === 'Critical' && (
-            <View style={[styles.tag, { backgroundColor: '#FFF3E0' }]}>
-              <Text style={[styles.tagText, { color: '#E65100' }]}>Critical</Text>
+            <View style={[styles.tag, { backgroundColor: tc('#FFF3E0') }]}>
+              <Text style={[styles.tagText, { color: tct('#E65100') }]}>Critical</Text>
             </View>
           )}
         </View>
       </View>
       {showAssignee && (
         <Text style={styles.assignee} numberOfLines={1}>
-          <Ionicons name="person-outline" size={12} color="#888" /> {item.assignedTo?.displayName || 'Unassigned'}
+          <Ionicons name="person-outline" size={12} color={tct('#888')} /> {item.assignedTo?.displayName || 'Unassigned'}
         </Text>
       )}
     </TouchableOpacity>
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => StyleSheet.create({
   card: {
-    backgroundColor: '#FFF',
+    backgroundColor: tc('#FFF'),
     borderRadius: 12,
     padding: 14,
     marginBottom: 10,
     borderWidth: 1,
-    borderColor: '#EEE',
+    borderColor: tc('#EEE'),
   },
   row: { flexDirection: 'row', alignItems: 'center' },
-  icon: { width: 38, height: 38, borderRadius: 19, backgroundColor: '#FFF1EA', alignItems: 'center', justifyContent: 'center' },
-  title: { fontSize: 16, fontWeight: 'bold', color: '#222' },
-  sub: { fontSize: 12, color: '#777', marginTop: 2 },
-  desc: { fontSize: 14, color: '#555', marginTop: 10, lineHeight: 20 },
+  icon: { width: 38, height: 38, borderRadius: 19, backgroundColor: tc('#FFF1EA'), alignItems: 'center', justifyContent: 'center' },
+  title: { fontSize: 16, fontWeight: 'bold', color: tct('#222') },
+  sub: { fontSize: 12, color: tct('#777'), marginTop: 2 },
+  desc: { fontSize: 14, color: tct('#555'), marginTop: 10, lineHeight: 20 },
   footer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 10 },
-  id: { fontSize: 11, color: '#888', fontFamily: 'monospace', flexShrink: 1, marginRight: 8 },
+  id: { fontSize: 11, color: tct('#888'), fontFamily: 'monospace', flexShrink: 1, marginRight: 8 },
   tags: { flexDirection: 'row', gap: 6 },
   tag: { flexDirection: 'row', alignItems: 'center', gap: 3, paddingHorizontal: 7, paddingVertical: 3, borderRadius: 10 },
   tagText: { fontSize: 11, fontWeight: '600' },
-  assignee: { fontSize: 12, color: '#888', marginTop: 8 },
+  assignee: { fontSize: 12, color: tct('#888'), marginTop: 8 },
   badge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 },
   badgeSmall: { paddingHorizontal: 8, paddingVertical: 3 },
   badgeText: { color: '#FFF', fontSize: 12, fontWeight: 'bold' },
   badgeTextSmall: { fontSize: 10 },
-});
+}));

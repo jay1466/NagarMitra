@@ -21,6 +21,7 @@ import * as Location from 'expo-location';
 import { communityAPI, errorMessage } from '../api/client';
 import { toCompressedDataUri } from '../utils/image';
 
+import { tc, tct, themedStyles } from '../theme';
 const { width } = Dimensions.get('window');
 
 export default function CommunityScreen({ navigation }) {
@@ -41,14 +42,14 @@ export default function CommunityScreen({ navigation }) {
   const scrollY = useRef(new Animated.Value(0)).current;
 
   const categories = [
-    { id: 'general', name: 'General', icon: 'chatbubble', color: '#FF4500' },
-    { id: 'roads', name: 'Roads', icon: 'car', color: '#007BFF' },
-    { id: 'water', name: 'Water', icon: 'water', color: '#17A2B8' },
-    { id: 'electricity', name: 'Power', icon: 'flash', color: '#FFC107' },
-    { id: 'garbage', name: 'Waste', icon: 'trash', color: '#28A745' },
-    { id: 'safety', name: 'Safety', icon: 'shield', color: '#DC3545' },
-    { id: 'parks', name: 'Parks', icon: 'leaf', color: '#6F42C1' },
-    { id: 'noise', name: 'Noise', icon: 'volume-high', color: '#FD7E14' }
+    { id: 'general', name: 'General', icon: 'chatbubble', color: tct('#FF4500') },
+    { id: 'roads', name: 'Roads', icon: 'car', color: tct('#007BFF') },
+    { id: 'water', name: 'Water', icon: 'water', color: tct('#17A2B8') },
+    { id: 'electricity', name: 'Power', icon: 'flash', color: tct('#FFC107') },
+    { id: 'garbage', name: 'Waste', icon: 'trash', color: tct('#28A745') },
+    { id: 'safety', name: 'Safety', icon: 'shield', color: tct('#DC3545') },
+    { id: 'parks', name: 'Parks', icon: 'leaf', color: tct('#6F42C1') },
+    { id: 'noise', name: 'Noise', icon: 'volume-high', color: tct('#FD7E14') }
   ];
 
   useEffect(() => {
@@ -269,10 +270,10 @@ export default function CommunityScreen({ navigation }) {
         <Text style={styles.headerTitle}>Community</Text>
         <View style={styles.headerActions}>
           <TouchableOpacity style={styles.headerButton} onPress={() => setShowCreateModal(true)}>
-            <Ionicons name="add-circle" size={28} color="#FF4500" />
+            <Ionicons name="add-circle" size={28} color={tct('#FF4500')} />
           </TouchableOpacity>
           <TouchableOpacity style={styles.headerButton}>
-            <Ionicons name="notifications" size={24} color="#333" />
+            <Ionicons name="notifications" size={24} color={tct('#333')} />
           </TouchableOpacity>
         </View>
       </Animated.View>
@@ -284,7 +285,7 @@ export default function CommunityScreen({ navigation }) {
       <ScrollView horizontal showsHorizontalScrollIndicator={false}>
         <TouchableOpacity style={styles.addStoryButton} onPress={() => setShowCreateModal(true)}>
           <View style={styles.addStoryIcon}>
-            <Ionicons name="add" size={24} color="#FF4500" />
+            <Ionicons name="add" size={24} color={tct('#FF4500')} />
           </View>
           <Text style={styles.storyText}>Your Story</Text>
         </TouchableOpacity>
@@ -297,7 +298,7 @@ export default function CommunityScreen({ navigation }) {
               setStories((prev) => prev.map((s) => (s.id === story.id ? { ...s, viewed: true } : s)));
             }}
           >
-            <View style={[styles.storyRing, { borderColor: story.viewed ? '#DDD' : '#FF4500' }]}>
+            <View style={[styles.storyRing, { borderColor: story.viewed ? tc('#DDD') : tc('#FF4500') }]}>
               <Avatar uri={story.image || story.avatar} name={story.username} style={styles.storyAvatar} />
             </View>
             <Text style={styles.storyText} numberOfLines={1}>{story.username}</Text>
@@ -320,7 +321,7 @@ export default function CommunityScreen({ navigation }) {
               {post.location && (
                 <>
                   <Text style={styles.metaDot}>•</Text>
-                  <Ionicons name="location" size={12} color="#666" />
+                  <Ionicons name="location" size={12} color={tct('#666')} />
                   <Text style={styles.postLocation}>{post.location.address}</Text>
                 </>
               )}
@@ -334,7 +335,7 @@ export default function CommunityScreen({ navigation }) {
           </View>
           {post.isMine && (
             <TouchableOpacity style={styles.postMenuButton} onPress={() => confirmDelete(post)}>
-              <Ionicons name="trash-outline" size={20} color="#999" />
+              <Ionicons name="trash-outline" size={20} color={tct('#999')} />
             </TouchableOpacity>
           )}
         </View>
@@ -362,14 +363,14 @@ export default function CommunityScreen({ navigation }) {
             <Ionicons 
               name={post.isLiked ? "heart" : "heart-outline"} 
               size={24} 
-              color={post.isLiked ? "#FF3040" : "#333"} 
+              color={post.isLiked ? tc('#FF3040') : tc('#333')} 
             />
           </TouchableOpacity>
           <TouchableOpacity style={styles.actionButton}>
-            <Ionicons name="chatbubble-outline" size={22} color="#333" />
+            <Ionicons name="chatbubble-outline" size={22} color={tct('#333')} />
           </TouchableOpacity>
           <TouchableOpacity style={styles.actionButton} onPress={() => handleShare(post)}>
-            <Ionicons name="paper-plane-outline" size={22} color="#333" />
+            <Ionicons name="paper-plane-outline" size={22} color={tct('#333')} />
           </TouchableOpacity>
         </View>
         
@@ -378,7 +379,7 @@ export default function CommunityScreen({ navigation }) {
             style={[styles.voteButton, post.userVote === 'up' && styles.voteButtonActive]}
             onPress={() => handleVote(post.id, 'up')}
           >
-            <Ionicons name="chevron-up" size={20} color={post.userVote === 'up' ? "#FF4500" : "#666"} />
+            <Ionicons name="chevron-up" size={20} color={post.userVote === 'up' ? tc('#FF4500') : tc('#666')} />
             <Text style={[styles.voteCount, post.userVote === 'up' && styles.voteCountActive]}>
               {post.upvotes}
             </Text>
@@ -387,7 +388,7 @@ export default function CommunityScreen({ navigation }) {
             style={[styles.voteButton, post.userVote === 'down' && styles.voteButtonActive]}
             onPress={() => handleVote(post.id, 'down')}
           >
-            <Ionicons name="chevron-down" size={20} color={post.userVote === 'down' ? "#FF4500" : "#666"} />
+            <Ionicons name="chevron-down" size={20} color={post.userVote === 'down' ? tc('#FF4500') : tc('#666')} />
             <Text style={[styles.voteCount, post.userVote === 'down' && styles.voteCountActive]}>
               {post.downvotes}
             </Text>
@@ -432,18 +433,18 @@ export default function CommunityScreen({ navigation }) {
                   style={styles.removeImageButton} 
                   onPress={() => setNewPost(prev => ({ ...prev, image: null }))}
                 >
-                  <Ionicons name="close-circle" size={24} color="#FF3040" />
+                  <Ionicons name="close-circle" size={24} color={tct('#FF3040')} />
                 </TouchableOpacity>
               </View>
             ) : (
               <View style={styles.imagePlaceholder}>
                 <View style={styles.imageOptions}>
                   <TouchableOpacity style={styles.imageOptionButton} onPress={takePhoto}>
-                    <Ionicons name="camera" size={30} color="#FF4500" />
+                    <Ionicons name="camera" size={30} color={tct('#FF4500')} />
                     <Text style={styles.imageOptionText}>Camera</Text>
                   </TouchableOpacity>
                   <TouchableOpacity style={styles.imageOptionButton} onPress={pickImage}>
-                    <Ionicons name="image" size={30} color="#FF4500" />
+                    <Ionicons name="image" size={30} color={tct('#FF4500')} />
                     <Text style={styles.imageOptionText}>Gallery</Text>
                   </TouchableOpacity>
                 </View>
@@ -454,7 +455,7 @@ export default function CommunityScreen({ navigation }) {
           {/* Caption Input */}
           <TextInput
             style={styles.captionInput}
-            placeholderTextColor="#999"
+            placeholderTextColor={tc('#999')}
             multiline
             placeholder="What's happening in your community?"
             value={newPost.caption}
@@ -482,7 +483,7 @@ export default function CommunityScreen({ navigation }) {
                   />
                   <Text style={[
                     styles.categoryChipText,
-                    { color: newPost.category === category.id ? '#FFF' : '#333' }
+                    { color: newPost.category === category.id ? '#FFF' : tc('#333') }
                   ]}>
                     {category.name}
                   </Text>
@@ -494,7 +495,7 @@ export default function CommunityScreen({ navigation }) {
           {/* Location Section */}
           <View style={styles.locationSection}>
             <TouchableOpacity style={styles.locationButton} onPress={getCurrentLocation}>
-              <Ionicons name="location" size={20} color="#FF4500" />
+              <Ionicons name="location" size={20} color={tct('#FF4500')} />
               <Text style={styles.locationButtonText}>
                 {newPost.location ? newPost.location.address : 'Add Location'}
               </Text>
@@ -510,7 +511,7 @@ export default function CommunityScreen({ navigation }) {
               <Ionicons 
                 name={newPost.isAnonymous ? "checkbox" : "square-outline"} 
                 size={20} 
-                color="#FF4500" 
+                color={tct('#FF4500')} 
               />
               <Text style={styles.anonymousText}>Post anonymously</Text>
             </TouchableOpacity>
@@ -525,7 +526,7 @@ export default function CommunityScreen({ navigation }) {
       {renderHeader()}
       <Animated.ScrollView
         style={styles.scrollView}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#FF4500']} />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[tc('#FF4500')]} />}
         onScroll={Animated.event(
           [{ nativeEvent: { contentOffset: { y: scrollY } } }],
           { useNativeDriver: false }
@@ -535,7 +536,7 @@ export default function CommunityScreen({ navigation }) {
         {renderStories()}
         {loadError ? (
           <TouchableOpacity style={styles.errorBanner} onPress={onRefresh}>
-            <Ionicons name="cloud-offline-outline" size={18} color="#DC3545" />
+            <Ionicons name="cloud-offline-outline" size={18} color={tct('#DC3545')} />
             <Text style={styles.errorBannerText}>{loadError} Tap to retry.</Text>
           </TouchableOpacity>
         ) : null}
@@ -547,7 +548,7 @@ export default function CommunityScreen({ navigation }) {
           posts.map(renderPost)
         ) : (
           <View style={styles.emptyContainer}>
-            <Ionicons name="chatbubbles" size={64} color="#DDD" />
+            <Ionicons name="chatbubbles" size={64} color={tct('#DDD')} />
             <Text style={styles.emptyText}>No posts yet</Text>
             <Text style={styles.emptySubtext}>Be the first to share something with your community!</Text>
             <TouchableOpacity 
@@ -571,8 +572,8 @@ function Avatar({ uri, name, style }) {
   if (uri) return <Image source={{ uri }} style={style} />;
   const initial = (name || '?').trim().charAt(0).toUpperCase() || '?';
   return (
-    <View style={[style, { backgroundColor: '#FFE1D4', alignItems: 'center', justifyContent: 'center' }]}>
-      <Text style={{ color: '#FF4500', fontWeight: 'bold', fontSize: 16 }}>{initial}</Text>
+    <View style={[style, { backgroundColor: tc('#FFE1D4'), alignItems: 'center', justifyContent: 'center' }]}>
+      <Text style={{ color: tct('#FF4500'), fontWeight: 'bold', fontSize: 16 }}>{initial}</Text>
     </View>
   );
 }
@@ -595,16 +596,16 @@ const formatTime = (timestamp) => {
 
 const getCategoryColor = (category) => {
   const colors = {
-    general: '#FF4500',
-    roads: '#007BFF',
-    water: '#17A2B8',
-    electricity: '#FFC107',
-    garbage: '#28A745',
-    safety: '#DC3545',
-    parks: '#6F42C1',
-    noise: '#FD7E14'
+    general: tc('#FF4500'),
+    roads: tc('#007BFF'),
+    water: tc('#17A2B8'),
+    electricity: tc('#FFC107'),
+    garbage: tc('#28A745'),
+    safety: tc('#DC3545'),
+    parks: tc('#6F42C1'),
+    noise: tc('#FD7E14')
   };
-  return colors[category] || '#FF4500';
+  return colors[category] || tc('#FF4500');
 };
 
 const getCategoryIcon = (category) => {
@@ -621,23 +622,23 @@ const getCategoryIcon = (category) => {
   return icons[category] || 'chatbubble';
 };
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFF'
+    backgroundColor: tc('#FFF')
   },
   errorBanner: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: '#FFEBEE',
+    backgroundColor: tc('#FFEBEE'),
     padding: 12,
     margin: 12,
     borderRadius: 8
   },
   errorBannerText: {
     flex: 1,
-    color: '#DC3545',
+    color: tct('#DC3545'),
     fontSize: 13
   },
   storyViewer: {
@@ -664,7 +665,7 @@ const styles = StyleSheet.create({
     marginTop: 16
   },
   storyViewerHint: {
-    color: '#AAA',
+    color: tct('#AAA'),
     fontSize: 12,
     marginTop: 24
   },
@@ -675,14 +676,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 12,
     paddingBottom: 12,
-    backgroundColor: '#FFF',
+    backgroundColor: tc('#FFF'),
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E5E5'
+    borderBottomColor: tc('#E5E5E5')
   },
   headerTitle: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#333'
+    color: tct('#333')
   },
   headerActions: {
     flexDirection: 'row',
@@ -698,7 +699,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 8,
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0'
+    borderBottomColor: tc('#F0F0F0')
   },
   addStoryButton: {
     alignItems: 'center',
@@ -708,10 +709,10 @@ const styles = StyleSheet.create({
     width: 60,
     height: 60,
     borderRadius: 30,
-    backgroundColor: '#F8F9FA',
+    backgroundColor: tc('#F8F9FA'),
     borderWidth: 2,
     borderStyle: 'dashed',
-    borderColor: '#FF4500',
+    borderColor: tc('#FF4500'),
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 4
@@ -735,12 +736,12 @@ const styles = StyleSheet.create({
   },
   storyText: {
     fontSize: 12,
-    color: '#333',
+    color: tct('#333'),
     maxWidth: 60,
     textAlign: 'center'
   },
   postContainer: {
-    backgroundColor: '#FFF',
+    backgroundColor: tc('#FFF'),
     marginBottom: 8,
     paddingBottom: 12
   },
@@ -765,7 +766,7 @@ const styles = StyleSheet.create({
   authorName: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333'
+    color: tct('#333')
   },
   postMeta: {
     flexDirection: 'row',
@@ -774,16 +775,16 @@ const styles = StyleSheet.create({
   },
   postTime: {
     fontSize: 12,
-    color: '#666'
+    color: tct('#666')
   },
   metaDot: {
     fontSize: 12,
-    color: '#666',
+    color: tct('#666'),
     marginHorizontal: 4
   },
   postLocation: {
     fontSize: 12,
-    color: '#666',
+    color: tct('#666'),
     marginLeft: 2
   },
   postHeaderActions: {
@@ -823,7 +824,7 @@ const styles = StyleSheet.create({
   postCaption: {
     fontSize: 15,
     lineHeight: 20,
-    color: '#333'
+    color: tct('#333')
   },
   postActions: {
     flexDirection: 'row',
@@ -843,7 +844,7 @@ const styles = StyleSheet.create({
   voteActions: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F8F9FA',
+    backgroundColor: tc('#F8F9FA'),
     borderRadius: 20,
     paddingHorizontal: 4
   },
@@ -855,16 +856,16 @@ const styles = StyleSheet.create({
     borderRadius: 16
   },
   voteButtonActive: {
-    backgroundColor: '#FFF5F0'
+    backgroundColor: tc('#FFF5F0')
   },
   voteCount: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#666',
+    color: tct('#666'),
     marginLeft: 2
   },
   voteCountActive: {
-    color: '#FF4500'
+    color: tct('#FF4500')
   },
   postStats: {
     paddingHorizontal: 16,
@@ -873,16 +874,16 @@ const styles = StyleSheet.create({
   likesCount: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#333',
+    color: tct('#333'),
     marginBottom: 4
   },
   commentsLink: {
     fontSize: 14,
-    color: '#666'
+    color: tct('#666')
   },
   modalContainer: {
     flex: 1,
-    backgroundColor: '#FFF'
+    backgroundColor: tc('#FFF')
   },
   modalHeader: {
     flexDirection: 'row',
@@ -892,24 +893,24 @@ const styles = StyleSheet.create({
     paddingTop: 12,
     paddingBottom: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E5E5'
+    borderBottomColor: tc('#E5E5E5')
   },
   modalCancelButton: {
     fontSize: 16,
-    color: '#666'
+    color: tct('#666')
   },
   modalTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#333'
+    color: tct('#333')
   },
   modalSubmitButton: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#FF4500'
+    color: tct('#FF4500')
   },
   modalSubmitButtonDisabled: {
-    color: '#CCC'
+    color: tct('#CCC')
   },
   modalContent: {
     flex: 1,
@@ -936,7 +937,7 @@ const styles = StyleSheet.create({
     height: 200,
     borderWidth: 2,
     borderStyle: 'dashed',
-    borderColor: '#DDD',
+    borderColor: tc('#DDD'),
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center'
@@ -951,12 +952,12 @@ const styles = StyleSheet.create({
   imageOptionText: {
     marginTop: 8,
     fontSize: 14,
-    color: '#666'
+    color: tct('#666')
   },
   captionInput: {
-    color: "#1A1A1A",
+    color: tct('#1A1A1A'),
     borderWidth: 1,
-    borderColor: '#E5E5E5',
+    borderColor: tc('#E5E5E5'),
     borderRadius: 12,
     padding: 16,
     minHeight: 100,
@@ -970,7 +971,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333',
+    color: tct('#333'),
     marginBottom: 12
   },
   categoryChip: {
@@ -981,7 +982,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     marginRight: 8,
     borderWidth: 1,
-    borderColor: '#E5E5E5'
+    borderColor: tc('#E5E5E5')
   },
   categoryChipText: {
     fontSize: 14,
@@ -996,12 +997,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 12,
     borderWidth: 1,
-    borderColor: '#E5E5E5',
+    borderColor: tc('#E5E5E5'),
     borderRadius: 8
   },
   locationButtonText: {
     fontSize: 16,
-    color: '#333',
+    color: tct('#333'),
     marginLeft: 8
   },
   anonymousSection: {
@@ -1013,7 +1014,7 @@ const styles = StyleSheet.create({
   },
   anonymousText: {
     fontSize: 16,
-    color: '#333',
+    color: tct('#333'),
     marginLeft: 8
   },
   loadingContainer: {
@@ -1024,7 +1025,7 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: 16,
-    color: '#666',
+    color: tct('#666'),
     marginTop: 12
   },
   emptyContainer: {
@@ -1037,13 +1038,13 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#333',
+    color: tct('#333'),
     marginTop: 16,
     textAlign: 'center'
   },
   emptySubtext: {
     fontSize: 14,
-    color: '#666',
+    color: tct('#666'),
     marginTop: 8,
     textAlign: 'center',
     lineHeight: 20
@@ -1051,7 +1052,7 @@ const styles = StyleSheet.create({
   createFirstPostButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FF4500',
+    backgroundColor: tc('#FF4500'),
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 24,
@@ -1063,4 +1064,4 @@ const styles = StyleSheet.create({
     color: '#FFF',
     marginLeft: 8
   }
-});
+}));

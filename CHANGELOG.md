@@ -1,5 +1,17 @@
 # Changelog
 
+## v1.3.0 — 2026-10-26
+
+### Added
+- **Dark mode.** The app follows the phone's appearance by default, with a *Settings → Appearance* choice of System / Light / Dark (remembered on the device).
+  - Central theme engine (`src/theme.js`): every colour goes through `tc()` (surfaces) or `tct()` (text/icons); stylesheets are rebuilt per scheme with `themedStyles()`.
+  - Dark palette keeps cards lighter than the page and lifts coloured text so it stays readable (≥ 5:1 contrast for status text, 12:1 for titles).
+  - Map tiles are darkened in dark mode; navigation bar and status bar follow the theme.
+- OEM forced dark stays disabled (`forceDarkAllowed=false`) so phones can't recolour the app on top of its own dark theme.
+
+### Changed
+- Dashboard opens without loading the map; tap **Show map** to load it on demand.
+
 ## v1.2.2 — 2026-10-26
 
 ### Fixed

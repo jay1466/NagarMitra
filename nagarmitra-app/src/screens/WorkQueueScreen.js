@@ -7,6 +7,7 @@ import { useSession, jurisdictionLabel } from '../context/SessionContext';
 import ComplaintCard from '../components/ComplaintCard';
 import NotificationBell from '../components/NotificationBell';
 
+import { tc, tct, themedStyles } from '../theme';
 const FILTERS = [
   { key: 'open', label: 'Open', params: { status: 'open' } },
   { key: 'overdue', label: 'Overdue', params: { overdue: 1 } },
@@ -76,7 +77,7 @@ export default function WorkQueueScreen({ navigation, route }) {
       <View style={styles.header}>
         {navigation.canGoBack() && preset.title ? (
           <TouchableOpacity onPress={() => navigation.goBack()} style={{ marginRight: 8 }}>
-            <Ionicons name="arrow-back" size={24} color="#FF4500" />
+            <Ionicons name="arrow-back" size={24} color={tct('#FF4500')} />
           </TouchableOpacity>
         ) : null}
         <View style={{ flex: 1 }}>
@@ -88,9 +89,9 @@ export default function WorkQueueScreen({ navigation, route }) {
 
       {!preset.title && (
         <View style={styles.summary}>
-          <Summary label="Open" value={counts.open} color="#007BFF" onPress={() => setFilter('open')} />
-          <Summary label="Overdue" value={counts.overdue} color="#C62828" onPress={() => setFilter('overdue')} />
-          <Summary label="Escalated" value={counts.escalated} color="#8B0000" onPress={() => setFilter('escalated')} />
+          <Summary label="Open" value={counts.open} color={tct('#007BFF')} onPress={() => setFilter('open')} />
+          <Summary label="Overdue" value={counts.overdue} color={tct('#C62828')} onPress={() => setFilter('overdue')} />
+          <Summary label="Escalated" value={counts.escalated} color={tct('#8B0000')} onPress={() => setFilter('escalated')} />
         </View>
       )}
 
@@ -109,14 +110,14 @@ export default function WorkQueueScreen({ navigation, route }) {
       </View>
 
       {loading ? (
-        <ActivityIndicator size="large" color="#FF4500" style={{ marginTop: 40 }} />
+        <ActivityIndicator size="large" color={tct('#FF4500')} style={{ marginTop: 40 }} />
       ) : (
         <FlatList
           data={items}
           keyExtractor={(i) => i._id}
           contentContainerStyle={{ padding: 16, paddingTop: 4 }}
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); loadCounts(); }} colors={['#FF4500']} />
+            <RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); loadCounts(); }} colors={[tc('#FF4500')]} />
           }
           ListHeaderComponent={
             error ? (
@@ -137,7 +138,7 @@ export default function WorkQueueScreen({ navigation, route }) {
           ListEmptyComponent={
             !error && (
               <View style={styles.empty}>
-                <Ionicons name="checkmark-done-circle-outline" size={64} color="#CCC" />
+                <Ionicons name="checkmark-done-circle-outline" size={64} color={tct('#CCC')} />
                 <Text style={styles.emptyText}>Nothing here 🎉</Text>
               </View>
             )
@@ -157,23 +158,23 @@ function Summary({ label, value, color, onPress }) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F6F7F9' },
-  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, backgroundColor: '#FFF', borderBottomWidth: 1, borderBottomColor: '#EEE' },
-  title: { fontSize: 22, fontWeight: 'bold', color: '#222' },
-  subtitle: { fontSize: 13, color: '#777', marginTop: 2 },
+const styles = themedStyles(() => StyleSheet.create({
+  container: { flex: 1, backgroundColor: tc('#F6F7F9') },
+  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, backgroundColor: tc('#FFF'), borderBottomWidth: 1, borderBottomColor: tc('#EEE') },
+  title: { fontSize: 22, fontWeight: 'bold', color: tct('#222') },
+  subtitle: { fontSize: 13, color: tct('#777'), marginTop: 2 },
   summary: { flexDirection: 'row', gap: 10, padding: 16, paddingBottom: 4 },
-  sumCard: { flex: 1, backgroundColor: '#FFF', borderRadius: 12, paddingVertical: 14, alignItems: 'center' },
+  sumCard: { flex: 1, backgroundColor: tc('#FFF'), borderRadius: 12, paddingVertical: 14, alignItems: 'center' },
   sumValue: { fontSize: 24, fontWeight: 'bold' },
-  sumLabel: { fontSize: 12, color: '#777', marginTop: 2 },
+  sumLabel: { fontSize: 12, color: tct('#777'), marginTop: 2 },
   chips: { paddingHorizontal: 16, paddingVertical: 10, gap: 8 },
-  chip: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 18, backgroundColor: '#FFF', borderWidth: 1, borderColor: '#E0E0E0' },
-  chipActive: { backgroundColor: '#FF4500', borderColor: '#FF4500' },
-  chipText: { fontSize: 13, color: '#555', fontWeight: '600' },
+  chip: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 18, backgroundColor: tc('#FFF'), borderWidth: 1, borderColor: tc('#E0E0E0') },
+  chipActive: { backgroundColor: tc('#FF4500'), borderColor: tc('#FF4500') },
+  chipText: { fontSize: 13, color: tct('#555'), fontWeight: '600' },
   chipTextActive: { color: '#FFF' },
-  count: { fontSize: 13, color: '#888', marginBottom: 8 },
-  error: { backgroundColor: '#FDECEA', padding: 12, borderRadius: 8, marginBottom: 10 },
-  errorText: { color: '#C62828' },
+  count: { fontSize: 13, color: tct('#888'), marginBottom: 8 },
+  error: { backgroundColor: tc('#FDECEA'), padding: 12, borderRadius: 8, marginBottom: 10 },
+  errorText: { color: tct('#C62828') },
   empty: { alignItems: 'center', marginTop: 50 },
-  emptyText: { fontSize: 16, color: '#999', marginTop: 10 },
-});
+  emptyText: { fontSize: 16, color: tct('#999'), marginTop: 10 },
+}));

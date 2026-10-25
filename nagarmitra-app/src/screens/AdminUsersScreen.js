@@ -9,11 +9,12 @@ import { useSession, roleLabel, departmentName } from '../context/SessionContext
 import LocationPicker from '../components/LocationPicker';
 import { placeLabel } from '../data/india';
 
+import { tc, tct, themedStyles } from '../theme';
 const ROLE_COLORS = {
-  state_admin: '#6F42C1',
-  district_admin: '#1A56DB',
-  officer: '#FF4500',
-  citizen: '#2E7D32',
+  state_admin: tc('#6F42C1'),
+  district_admin: tc('#1A56DB'),
+  officer: tc('#FF4500'),
+  citizen: tc('#2E7D32'),
 };
 
 export default function AdminUsersScreen({ navigation }) {
@@ -47,22 +48,22 @@ export default function AdminUsersScreen({ navigation }) {
     <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={24} color="#FF4500" />
+          <Ionicons name="arrow-back" size={24} color={tct('#FF4500')} />
         </TouchableOpacity>
         <Text style={styles.title}>Manage people</Text>
         <TouchableOpacity onPress={() => setEditing({})}>
-          <Ionicons name="person-add" size={24} color="#FF4500" />
+          <Ionicons name="person-add" size={24} color={tct('#FF4500')} />
         </TouchableOpacity>
       </View>
 
       <View style={styles.searchRow}>
-        <Ionicons name="search" size={18} color="#999" />
+        <Ionicons name="search" size={18} color={tct('#999')} />
         <TextInput
           style={styles.searchInput}
           value={search}
           onChangeText={setSearch}
           placeholder="Search name or email"
-          placeholderTextColor="#999"
+          placeholderTextColor={tc('#999')}
           autoCapitalize="none"
         />
       </View>
@@ -77,7 +78,7 @@ export default function AdminUsersScreen({ navigation }) {
       </View>
 
       {loading ? (
-        <ActivityIndicator color="#FF4500" style={{ marginTop: 30 }} />
+        <ActivityIndicator color={tct('#FF4500')} style={{ marginTop: 30 }} />
       ) : (
         <FlatList
           data={users}
@@ -86,7 +87,7 @@ export default function AdminUsersScreen({ navigation }) {
           ListEmptyComponent={<Text style={styles.empty}>No one found.</Text>}
           renderItem={({ item }) => (
             <TouchableOpacity style={styles.row} onPress={() => setEditing(item)}>
-              <Ionicons name="person-circle" size={38} color={item.isActive ? ROLE_COLORS[item.role] || '#999' : '#CCC'} />
+              <Ionicons name="person-circle" size={38} color={item.isActive ? ROLE_COLORS[item.role] || tc('#999') : tc('#CCC')} />
               <View style={{ flex: 1, marginLeft: 10 }}>
                 <Text style={styles.name}>{item.displayName || item.email}{item.isActive ? '' : ' (inactive)'}</Text>
                 <Text style={styles.email}>{item.email}</Text>
@@ -96,7 +97,7 @@ export default function AdminUsersScreen({ navigation }) {
                   {item.state ? ` · ${placeLabel(item.state, item.district)}` : ''}
                 </Text>
               </View>
-              <Ionicons name="create-outline" size={20} color="#BBB" />
+              <Ionicons name="create-outline" size={20} color={tct('#BBB')} />
             </TouchableOpacity>
           )}
         />
@@ -171,7 +172,7 @@ function EditUser({ me, meta, roles, user, onClose, onSaved }) {
           <View style={styles.sheetHeader}>
             <Text style={styles.sheetTitle}>{isNew ? 'Add a person' : user.displayName || user.email}</Text>
             <TouchableOpacity onPress={onClose}>
-              <Ionicons name="close" size={24} color="#666" />
+              <Ionicons name="close" size={24} color={tct('#666')} />
             </TouchableOpacity>
           </View>
           <ScrollView keyboardShouldPersistTaps="handled">
@@ -227,7 +228,7 @@ function EditUser({ me, meta, roles, user, onClose, onSaved }) {
             {!isNew && (
               <View style={styles.switchRow}>
                 <Text style={styles.label}>Account active</Text>
-                <Switch value={form.isActive} onValueChange={(v) => set({ isActive: v })} trackColor={{ true: '#FFB08A' }} thumbColor={form.isActive ? '#FF4500' : '#EEE'} />
+                <Switch value={form.isActive} onValueChange={(v) => set({ isActive: v })} trackColor={{ true: tc('#FFB08A') }} thumbColor={form.isActive ? tc('#FF4500') : '#EEE'} />
               </View>
             )}
 
@@ -245,39 +246,39 @@ function Field({ label, ...props }) {
   return (
     <View style={{ marginBottom: 12 }}>
       <Text style={styles.label}>{label}</Text>
-      <TextInput style={styles.input} placeholderTextColor="#999" autoCorrect={false} {...props} />
+      <TextInput style={styles.input} placeholderTextColor={tc('#999')} autoCorrect={false} {...props} />
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F6F7F9' },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 12, backgroundColor: '#FFF', borderBottomWidth: 1, borderBottomColor: '#EEE' },
-  title: { fontSize: 18, fontWeight: 'bold', color: '#222' },
-  searchRow: { flexDirection: 'row', alignItems: 'center', gap: 8, margin: 16, marginBottom: 0, paddingHorizontal: 12, borderRadius: 10, backgroundColor: '#FFF' },
-  searchInput: { flex: 1, fontSize: 15, color: '#1A1A1A', paddingVertical: 10 },
+const styles = themedStyles(() => StyleSheet.create({
+  container: { flex: 1, backgroundColor: tc('#F6F7F9') },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 12, backgroundColor: tc('#FFF'), borderBottomWidth: 1, borderBottomColor: tc('#EEE') },
+  title: { fontSize: 18, fontWeight: 'bold', color: tct('#222') },
+  searchRow: { flexDirection: 'row', alignItems: 'center', gap: 8, margin: 16, marginBottom: 0, paddingHorizontal: 12, borderRadius: 10, backgroundColor: tc('#FFF') },
+  searchInput: { flex: 1, fontSize: 15, color: tct('#1A1A1A'), paddingVertical: 10 },
   chips: { paddingHorizontal: 16, paddingVertical: 10, gap: 8 },
-  chip: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 18, backgroundColor: '#FFF', borderWidth: 1, borderColor: '#E0E0E0' },
-  chipActive: { backgroundColor: '#FF4500', borderColor: '#FF4500' },
-  chipText: { fontSize: 13, color: '#555', fontWeight: '600' },
+  chip: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 18, backgroundColor: tc('#FFF'), borderWidth: 1, borderColor: tc('#E0E0E0') },
+  chipActive: { backgroundColor: tc('#FF4500'), borderColor: tc('#FF4500') },
+  chipText: { fontSize: 13, color: tct('#555'), fontWeight: '600' },
   chipTextActive: { color: '#FFF' },
-  row: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFF', borderRadius: 12, padding: 12, marginBottom: 8 },
-  name: { fontSize: 15, fontWeight: 'bold', color: '#222' },
-  email: { fontSize: 12, color: '#777', marginTop: 1 },
-  meta: { fontSize: 12, color: '#999', marginTop: 3 },
-  empty: { textAlign: 'center', color: '#999', marginTop: 30 },
+  row: { flexDirection: 'row', alignItems: 'center', backgroundColor: tc('#FFF'), borderRadius: 12, padding: 12, marginBottom: 8 },
+  name: { fontSize: 15, fontWeight: 'bold', color: tct('#222') },
+  email: { fontSize: 12, color: tct('#777'), marginTop: 1 },
+  meta: { fontSize: 12, color: tct('#999'), marginTop: 3 },
+  empty: { textAlign: 'center', color: tct('#999'), marginTop: 30 },
   overlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.4)' },
-  sheet: { backgroundColor: '#FFF', borderTopLeftRadius: 18, borderTopRightRadius: 18, padding: 20, maxHeight: '90%' },
+  sheet: { backgroundColor: tc('#FFF'), borderTopLeftRadius: 18, borderTopRightRadius: 18, padding: 20, maxHeight: '90%' },
   sheetHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
-  sheetTitle: { fontSize: 18, fontWeight: 'bold', color: '#222', flex: 1 },
-  label: { fontSize: 14, fontWeight: '600', color: '#333', marginBottom: 6, marginTop: 4 },
-  input: { borderWidth: 1.5, borderColor: '#DDD', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, fontSize: 15, color: '#1A1A1A', backgroundColor: '#FAFAFA' },
+  sheetTitle: { fontSize: 18, fontWeight: 'bold', color: tct('#222'), flex: 1 },
+  label: { fontSize: 14, fontWeight: '600', color: tct('#333'), marginBottom: 6, marginTop: 4 },
+  input: { borderWidth: 1.5, borderColor: tc('#DDD'), borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, fontSize: 15, color: tct('#1A1A1A'), backgroundColor: tc('#FAFAFA') },
   wrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  opt: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 18, borderWidth: 1, borderColor: '#DDD' },
-  optActive: { backgroundColor: '#FF4500', borderColor: '#FF4500' },
-  optText: { color: '#555', fontWeight: '600', fontSize: 13 },
+  opt: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 18, borderWidth: 1, borderColor: tc('#DDD') },
+  optActive: { backgroundColor: tc('#FF4500'), borderColor: tc('#FF4500') },
+  optText: { color: tct('#555'), fontWeight: '600', fontSize: 13 },
   optTextActive: { color: '#FFF' },
   switchRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 12 },
-  save: { backgroundColor: '#FF4500', borderRadius: 10, minHeight: 50, alignItems: 'center', justifyContent: 'center', marginTop: 18, marginBottom: 10 },
+  save: { backgroundColor: tc('#FF4500'), borderRadius: 10, minHeight: 50, alignItems: 'center', justifyContent: 'center', marginTop: 18, marginBottom: 10 },
   saveText: { color: '#FFF', fontWeight: 'bold', fontSize: 16 },
-});
+}));

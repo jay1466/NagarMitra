@@ -2,11 +2,12 @@ import React from 'react';
 import { View, Text, ScrollView, StyleSheet, Dimensions } from 'react-native';
 import { LineChart, BarChart, PieChart } from 'react-native-chart-kit';
 
+import { tc, tct, themedStyles } from '../theme';
 const { width } = Dimensions.get('window');
 
 const chartConfig = {
-  backgroundGradientFrom: '#FFF',
-  backgroundGradientTo: '#FFF',
+  backgroundGradientFrom: tc('#FFF'),
+  backgroundGradientTo: tc('#FFF'),
   color: (opacity = 1) => `rgba(255, 69, 0, ${opacity})`,
   strokeWidth: 2,
   barPercentage: 0.5,
@@ -91,11 +92,11 @@ export const PieChartComponent = ({ data, title, height = 220 }) => {
     );
   }
 
-  const colors = ['#FF4500', '#FF6A33', '#FF8566', '#FFA099', '#FFBBCC'];
+  const colors = [tc('#FF4500'), tc('#FF6A33'), tc('#FF8566'), tc('#FFA099'), tc('#FFBBCC')];
   const pieData = data.map((item, index) => ({
     ...item,
     color: colors[index % colors.length],
-    legendFontColor: '#666',
+    legendFontColor: tc('#666'),
     legendFontSize: 14,
   }));
 
@@ -119,9 +120,9 @@ export const PieChartComponent = ({ data, title, height = 220 }) => {
 
 export const MetricsCard = ({ title, value, subtitle, trend, trendDirection }) => {
   const getTrendColor = () => {
-    if (trendDirection === 'up') return '#28A745';
-    if (trendDirection === 'down') return '#DC3545';
-    return '#666';
+    if (trendDirection === 'up') return tc('#28A745');
+    if (trendDirection === 'down') return tc('#DC3545');
+    return tc('#666');
   };
 
   const getTrendIcon = () => {
@@ -201,15 +202,15 @@ export const StatsDashboard = ({ stats, loading = false }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => StyleSheet.create({
   chartContainer: {
-    backgroundColor: '#FFF',
+    backgroundColor: tc('#FFF'),
     borderRadius: 12,
     padding: 16,
     marginHorizontal: 16,
     marginVertical: 8,
     elevation: 2,
-    shadowColor: '#000',
+    shadowColor: tc('#000'),
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
@@ -217,7 +218,7 @@ const styles = StyleSheet.create({
   chartTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#333',
+    color: tct('#333'),
     marginBottom: 16,
     textAlign: 'center',
   },
@@ -231,7 +232,7 @@ const styles = StyleSheet.create({
   },
   noDataText: {
     fontSize: 16,
-    color: '#999',
+    color: tct('#999'),
     textAlign: 'center',
   },
   loadingContainer: {
@@ -241,7 +242,7 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: 16,
-    color: '#666',
+    color: tct('#666'),
   },
   statsContainer: {
     padding: 16,
@@ -254,11 +255,11 @@ const styles = StyleSheet.create({
   },
   metricsCard: {
     flex: 1,
-    backgroundColor: '#FFF',
+    backgroundColor: tc('#FFF'),
     borderRadius: 12,
     padding: 16,
     elevation: 2,
-    shadowColor: '#000',
+    shadowColor: tc('#000'),
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
@@ -271,7 +272,7 @@ const styles = StyleSheet.create({
   },
   metricsTitle: {
     fontSize: 14,
-    color: '#666',
+    color: tct('#666'),
     fontWeight: '500',
   },
   trendContainer: {
@@ -290,11 +291,11 @@ const styles = StyleSheet.create({
   metricsValue: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#FF4500',
+    color: tct('#FF4500'),
     marginBottom: 4,
   },
   metricsSubtitle: {
     fontSize: 12,
-    color: '#999',
+    color: tct('#999'),
   },
-});
+}));

@@ -14,6 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { auth, signOut } from '../lib/firebase';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+import { tc, tct, themedStyles } from '../theme';
 const OthersScreen = ({ navigation }) => {
   const handleLogout = () => {
     Alert.alert(
@@ -48,49 +49,49 @@ const OthersScreen = ({ navigation }) => {
       title: 'My Profile',
       icon: 'person-outline',
       onPress: () => navigation.navigate('Profile'),
-      color: '#FF4500',
+      color: tct('#FF4500'),
     },
     {
       id: 'notifications',
       title: 'Notifications',
       icon: 'notifications-outline',
       onPress: () => navigation.navigate('Notifications'),
-      color: '#FF4500',
+      color: tct('#FF4500'),
     },
     {
       id: 'about',
       title: 'About Us',
       icon: 'information-circle-outline',
       onPress: () => navigation.navigate('AboutUs'),
-      color: '#FF4500',
+      color: tct('#FF4500'),
     },
     {
       id: 'faq',
       title: 'FAQ',
       icon: 'help-circle-outline',
       onPress: () => navigation.navigate('FAQ'),
-      color: '#FF4500',
+      color: tct('#FF4500'),
     },
     {
       id: 'settings',
       title: 'Settings',
       icon: 'settings-outline',
       onPress: () => navigation.navigate('Settings'),
-      color: '#FF4500',
+      color: tct('#FF4500'),
     },
     {
       id: 'feedback',
       title: 'Feedback',
       icon: 'chatbubble-outline',
       onPress: () => navigation.navigate('Feedback'),
-      color: '#FF4500',
+      color: tct('#FF4500'),
     },
     {
       id: 'logout',
       title: 'Logout',
       icon: 'log-out-outline',
       onPress: handleLogout,
-      color: '#DC3545',
+      color: tct('#DC3545'),
     },
   ];
 
@@ -106,7 +107,7 @@ const OthersScreen = ({ navigation }) => {
           <Ionicons name={item.icon} size={24} color={item.color} />
         </View>
         <Text style={styles.menuItemText}>{item.title}</Text>
-        <Ionicons name="chevron-forward" size={20} color="#CCC" />
+        <Ionicons name="chevron-forward" size={20} color={tct('#CCC')} />
       </View>
     </TouchableOpacity>
   );
@@ -129,7 +130,7 @@ const OthersScreen = ({ navigation }) => {
       {/* User Info Section */}
       <View style={styles.userSection}>
         <View style={styles.userAvatar}>
-          <Ionicons name="person" size={30} color="#FF4500" />
+          <Ionicons name="person" size={30} color={tct('#FF4500')} />
         </View>
         <View style={styles.userInfo}>
           <Text style={styles.userName}>
@@ -155,17 +156,17 @@ const OthersScreen = ({ navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFF',
+    backgroundColor: tc('#FFF'),
   },
   header: {
     paddingHorizontal: 20,
     paddingTop: 20,
     paddingBottom: 15,
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
+    borderBottomColor: tc('#F0F0F0'),
   },
   logoSection: {
     flexDirection: 'row',
@@ -180,11 +181,11 @@ const styles = StyleSheet.create({
   logoText: {
     fontSize: 22,
     fontWeight: 'bold',
-    color: '#FF4500',
+    color: tct('#FF4500'),
   },
   subtitle: {
     fontSize: 14,
-    color: '#666',
+    color: tct('#666'),
     marginLeft: 38,
   },
   userSection: {
@@ -193,13 +194,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
+    borderBottomColor: tc('#F0F0F0'),
   },
   userAvatar: {
     width: 50,
     height: 50,
     borderRadius: 25,
-    backgroundColor: '#FF450015',
+    backgroundColor: tc('#FF450015'),
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 15,
@@ -210,12 +211,12 @@ const styles = StyleSheet.create({
   userName: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#000',
+    color: tct('#000'),
     marginBottom: 4,
   },
   userEmail: {
     fontSize: 14,
-    color: '#666',
+    color: tct('#666'),
   },
   menuContainer: {
     paddingTop: 10,
@@ -224,7 +225,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 15,
     borderBottomWidth: 1,
-    borderBottomColor: '#F8F8F8',
+    borderBottomColor: tc('#F8F8F8'),
   },
   menuItemContent: {
     flexDirection: 'row',
@@ -241,7 +242,7 @@ const styles = StyleSheet.create({
   menuItemText: {
     flex: 1,
     fontSize: 16,
-    color: '#000',
+    color: tct('#000'),
     fontWeight: '500',
   },
   footer: {
@@ -251,14 +252,14 @@ const styles = StyleSheet.create({
   },
   versionText: {
     fontSize: 12,
-    color: '#999',
+    color: tct('#999'),
     marginBottom: 5,
   },
   footerText: {
     fontSize: 12,
-    color: '#FF4500',
+    color: tct('#FF4500'),
     fontStyle: 'italic',
   },
-});
+}));
 
 export default OthersScreen;

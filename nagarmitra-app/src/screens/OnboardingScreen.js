@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, Dimensions, FlatList, Image, TouchableOpacity }
 import * as Animatable from 'react-native-animatable';
 import { Ionicons } from '@expo/vector-icons';
 
+import { tc, tct, themedStyles } from '../theme';
 const slides = [
   {
     key: '1',
@@ -96,7 +97,7 @@ export default function OnboardingScreen({ onDone }) {
             delay={200}
             style={styles.iconContainer}
           >
-            {item.icon(80, '#FF4500')}
+            {item.icon(80, tc('#FF4500'))}
           </Animatable.View>
         )}
         
@@ -164,10 +165,10 @@ export default function OnboardingScreen({ onDone }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => StyleSheet.create({
   container: { 
     flex: 1, 
-    backgroundColor: '#fff'
+    backgroundColor: tc('#fff')
   },
   slide: { 
     width, 
@@ -185,12 +186,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     padding: 20,
-    backgroundColor: '#FFF5F0',
+    backgroundColor: tc('#FFF5F0'),
     borderRadius: 100,
     width: 140,
     height: 140,
     elevation: 5,
-    shadowColor: '#FF4500',
+    shadowColor: tc('#FF4500'),
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 4,
@@ -202,7 +203,7 @@ const styles = StyleSheet.create({
   logoText: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#FF4500',
+    color: tct('#FF4500'),
     marginTop: 5,
   },
   iconContainer: {
@@ -210,12 +211,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: 20,
     padding: 20,
-    backgroundColor: '#FFF5F0',
+    backgroundColor: tc('#FFF5F0'),
     borderRadius: 60,
     width: 120,
     height: 120,
     elevation: 3,
-    shadowColor: '#FF4500',
+    shadowColor: tc('#FF4500'),
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 3,
@@ -228,13 +229,13 @@ const styles = StyleSheet.create({
     fontSize: 26, 
     fontWeight: '700', 
     textAlign: 'center',
-    color: '#000',
+    color: tct('#000'),
     marginBottom: 10,
     lineHeight: 32,
   },
   subtitle: { 
     fontSize: 16, 
-    color: '#444', 
+    color: tct('#444'), 
     textAlign: 'center',
     lineHeight: 24,
     paddingHorizontal: 10,
@@ -242,7 +243,7 @@ const styles = StyleSheet.create({
   tagline: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#FF4500',
+    color: tct('#FF4500'),
     fontStyle: 'italic',
   },
   footer: { 
@@ -261,19 +262,19 @@ const styles = StyleSheet.create({
     width: 10, 
     height: 10, 
     borderRadius: 5, 
-    backgroundColor: '#ddd'
+    backgroundColor: tc('#ddd')
   },
   dotActive: { 
-    backgroundColor: '#FF4500',
+    backgroundColor: tc('#FF4500'),
     width: 24,
   },
   button: { 
-    backgroundColor: '#FF4500', 
+    backgroundColor: tc('#FF4500'), 
     paddingHorizontal: 32, 
     paddingVertical: 16, 
     borderRadius: 25,
     elevation: 3,
-    shadowColor: '#FF4500',
+    shadowColor: tc('#FF4500'),
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
     shadowRadius: 4,
@@ -285,4 +286,4 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     fontSize: 16,
   },
-});
+}));

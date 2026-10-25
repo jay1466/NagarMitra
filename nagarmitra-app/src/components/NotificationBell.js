@@ -4,8 +4,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useSession } from '../context/SessionContext';
 
+import { tc, tct, themedStyles } from '../theme';
 // Header bell with the unread count; opens the shared Inbox screen.
-export default function NotificationBell({ color = '#333' }) {
+export default function NotificationBell({ color = tct('#333') }) {
   const navigation = useNavigation();
   const { unreadCount } = useSession();
   return (
@@ -20,7 +21,7 @@ export default function NotificationBell({ color = '#333' }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => StyleSheet.create({
   btn: { padding: 6 },
   badge: {
     position: 'absolute',
@@ -29,12 +30,12 @@ const styles = StyleSheet.create({
     minWidth: 18,
     height: 18,
     borderRadius: 9,
-    backgroundColor: '#DC3545',
+    backgroundColor: tc('#DC3545'),
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 4,
     borderWidth: 1.5,
-    borderColor: '#FFF',
+    borderColor: tc('#FFF'),
   },
   badgeText: { color: '#FFF', fontSize: 10, fontWeight: 'bold' },
-});
+}));

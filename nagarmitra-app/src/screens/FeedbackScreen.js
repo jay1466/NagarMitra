@@ -14,6 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { feedbackAPI, errorMessage } from '../api/client';
 import { APP_VERSION } from '../appInfo';
 
+import { tc, tct, themedStyles } from '../theme';
 const FeedbackScreen = ({ navigation }) => {
   const [feedbackData, setFeedbackData] = useState({
     type: 'general', // general, bug, feature, improvement
@@ -25,10 +26,10 @@ const FeedbackScreen = ({ navigation }) => {
   const [submitting, setSubmitting] = useState(false);
 
   const feedbackTypes = [
-    { key: 'general', label: 'General Feedback', icon: 'chatbubble-outline', color: '#007BFF' },
-    { key: 'bug', label: 'Bug Report', icon: 'bug-outline', color: '#DC3545' },
-    { key: 'feature', label: 'Feature Request', icon: 'bulb-outline', color: '#28A745' },
-    { key: 'improvement', label: 'Improvement Suggestion', icon: 'trending-up-outline', color: '#FFC107' },
+    { key: 'general', label: 'General Feedback', icon: 'chatbubble-outline', color: tct('#007BFF') },
+    { key: 'bug', label: 'Bug Report', icon: 'bug-outline', color: tct('#DC3545') },
+    { key: 'feature', label: 'Feature Request', icon: 'bulb-outline', color: tct('#28A745') },
+    { key: 'improvement', label: 'Improvement Suggestion', icon: 'trending-up-outline', color: tct('#FFC107') },
   ];
 
   const handleTypeSelect = (type) => {
@@ -115,7 +116,7 @@ const FeedbackScreen = ({ navigation }) => {
               <Ionicons
                 name={star <= feedbackData.rating ? 'star' : 'star-outline'}
                 size={32}
-                color={star <= feedbackData.rating ? '#FFD700' : '#DDD'}
+                color={star <= feedbackData.rating ? tc('#FFD700') : tc('#DDD')}
               />
             </TouchableOpacity>
           ))}
@@ -141,7 +142,7 @@ const FeedbackScreen = ({ navigation }) => {
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={24} color="#FF4500" />
+          <Ionicons name="arrow-back" size={24} color={tct('#FF4500')} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Feedback</Text>
         <View style={styles.placeholder} />
@@ -197,7 +198,7 @@ const FeedbackScreen = ({ navigation }) => {
             Title <Text style={styles.required}>*</Text>
           </Text>
           <TextInput
-            placeholderTextColor="#9A9A9A"
+            placeholderTextColor={tc('#9A9A9A')}
             style={styles.titleInput}
             placeholder={`Enter a brief title for your ${getTypeInfo().label.toLowerCase()}`}
             value={feedbackData.title}
@@ -213,7 +214,7 @@ const FeedbackScreen = ({ navigation }) => {
             Description <Text style={styles.required}>*</Text>
           </Text>
           <TextInput
-            placeholderTextColor="#9A9A9A"
+            placeholderTextColor={tc('#9A9A9A')}
             style={styles.messageInput}
             placeholder={`Please provide detailed information about your ${getTypeInfo().label.toLowerCase()}...`}
             value={feedbackData.message}
@@ -230,7 +231,7 @@ const FeedbackScreen = ({ navigation }) => {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Email (Optional)</Text>
           <TextInput
-            placeholderTextColor="#9A9A9A"
+            placeholderTextColor={tc('#9A9A9A')}
             style={styles.emailInput}
             placeholder="Enter your email if you'd like a response"
             value={feedbackData.email}
@@ -247,19 +248,19 @@ const FeedbackScreen = ({ navigation }) => {
         <View style={styles.guidelinesSection}>
           <Text style={styles.guidelinesTitle}>Guidelines</Text>
           <View style={styles.guideline}>
-            <Ionicons name="checkmark-circle" size={16} color="#28A745" />
+            <Ionicons name="checkmark-circle" size={16} color={tct('#28A745')} />
             <Text style={styles.guidelineText}>Be specific and descriptive</Text>
           </View>
           <View style={styles.guideline}>
-            <Ionicons name="checkmark-circle" size={16} color="#28A745" />
+            <Ionicons name="checkmark-circle" size={16} color={tct('#28A745')} />
             <Text style={styles.guidelineText}>Include steps to reproduce (for bugs)</Text>
           </View>
           <View style={styles.guideline}>
-            <Ionicons name="checkmark-circle" size={16} color="#28A745" />
+            <Ionicons name="checkmark-circle" size={16} color={tct('#28A745')} />
             <Text style={styles.guidelineText}>Suggest improvements constructively</Text>
           </View>
           <View style={styles.guideline}>
-            <Ionicons name="checkmark-circle" size={16} color="#28A745" />
+            <Ionicons name="checkmark-circle" size={16} color={tct('#28A745')} />
             <Text style={styles.guidelineText}>Keep it respectful and professional</Text>
           </View>
         </View>
@@ -284,10 +285,10 @@ const FeedbackScreen = ({ navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFF',
+    backgroundColor: tc('#FFF'),
   },
   header: {
     flexDirection: 'row',
@@ -297,12 +298,12 @@ const styles = StyleSheet.create({
     paddingTop: 20,
     paddingBottom: 15,
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
+    borderBottomColor: tc('#F0F0F0'),
   },
   headerTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#000',
+    color: tct('#000'),
   },
   placeholder: {
     width: 24,
@@ -312,35 +313,35 @@ const styles = StyleSheet.create({
   },
   introSection: {
     padding: 20,
-    backgroundColor: '#F8F9FA',
+    backgroundColor: tc('#F8F9FA'),
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
+    borderBottomColor: tc('#F0F0F0'),
   },
   introTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#000',
+    color: tct('#000'),
     marginBottom: 10,
   },
   introText: {
     fontSize: 16,
-    color: '#666',
+    color: tct('#666'),
     lineHeight: 22,
   },
   section: {
     paddingHorizontal: 20,
     paddingVertical: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#F8F8F8',
+    borderBottomColor: tc('#F8F8F8'),
   },
   sectionTitle: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#000',
+    color: tct('#000'),
     marginBottom: 15,
   },
   required: {
-    color: '#DC3545',
+    color: tct('#DC3545'),
   },
   typeContainer: {
     gap: 10,
@@ -351,15 +352,15 @@ const styles = StyleSheet.create({
     padding: 15,
     borderWidth: 2,
     borderRadius: 8,
-    backgroundColor: '#FFF',
+    backgroundColor: tc('#FFF'),
   },
   typeButtonActive: {
-    backgroundColor: '#FF4500',
-    borderColor: '#FF4500',
+    backgroundColor: tc('#FF4500'),
+    borderColor: tc('#FF4500'),
   },
   typeButtonText: {
     fontSize: 16,
-    color: '#333',
+    color: tct('#333'),
     marginLeft: 12,
     fontWeight: '500',
   },
@@ -371,7 +372,7 @@ const styles = StyleSheet.create({
   },
   ratingLabel: {
     fontSize: 16,
-    color: '#333',
+    color: tct('#333'),
     marginBottom: 15,
     textAlign: 'center',
   },
@@ -385,57 +386,57 @@ const styles = StyleSheet.create({
   },
   ratingText: {
     fontSize: 16,
-    color: '#FF4500',
+    color: tct('#FF4500'),
     fontWeight: '600',
   },
   titleInput: {
     borderWidth: 1,
-    borderColor: '#E0E0E0',
+    borderColor: tc('#E0E0E0'),
     borderRadius: 8,
     paddingHorizontal: 15,
     paddingVertical: 12,
     fontSize: 16,
-    color: '#000',
+    color: tct('#000'),
   },
   messageInput: {
     borderWidth: 1,
-    borderColor: '#E0E0E0',
+    borderColor: tc('#E0E0E0'),
     borderRadius: 8,
     paddingHorizontal: 15,
     paddingVertical: 12,
     fontSize: 16,
-    color: '#000',
+    color: tct('#000'),
     height: 120,
   },
   emailInput: {
     borderWidth: 1,
-    borderColor: '#E0E0E0',
+    borderColor: tc('#E0E0E0'),
     borderRadius: 8,
     paddingHorizontal: 15,
     paddingVertical: 12,
     fontSize: 16,
-    color: '#000',
+    color: tct('#000'),
   },
   charCount: {
     fontSize: 12,
-    color: '#666',
+    color: tct('#666'),
     textAlign: 'right',
     marginTop: 5,
   },
   helpText: {
     fontSize: 12,
-    color: '#666',
+    color: tct('#666'),
     marginTop: 8,
     lineHeight: 16,
   },
   guidelinesSection: {
     padding: 20,
-    backgroundColor: '#F8F9FA',
+    backgroundColor: tc('#F8F9FA'),
   },
   guidelinesTitle: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#000',
+    color: tct('#000'),
     marginBottom: 15,
   },
   guideline: {
@@ -445,14 +446,14 @@ const styles = StyleSheet.create({
   },
   guidelineText: {
     fontSize: 14,
-    color: '#333',
+    color: tct('#333'),
     marginLeft: 8,
   },
   submitButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FF4500',
+    backgroundColor: tc('#FF4500'),
     marginHorizontal: 20,
     marginVertical: 20,
     paddingVertical: 15,
@@ -460,13 +461,13 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   submitButtonDisabled: {
-    backgroundColor: '#CCC',
+    backgroundColor: tc('#CCC'),
   },
   submitButtonText: {
     color: '#FFF',
     fontSize: 16,
     fontWeight: '600',
   },
-});
+}));
 
 export default FeedbackScreen;

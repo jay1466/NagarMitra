@@ -8,6 +8,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
+import { tc, tct, themedStyles } from '../theme';
 const FAQScreen = ({ navigation }) => {
   const [expandedItem, setExpandedItem] = useState(null);
 
@@ -92,7 +93,7 @@ const FAQScreen = ({ navigation }) => {
           <Ionicons
             name={isExpanded ? 'chevron-up' : 'chevron-down'}
             size={20}
-            color="#FF4500"
+            color={tct('#FF4500')}
           />
         </TouchableOpacity>
         {isExpanded && (
@@ -109,7 +110,7 @@ const FAQScreen = ({ navigation }) => {
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={24} color="#FF4500" />
+          <Ionicons name="arrow-back" size={24} color={tct('#FF4500')} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>FAQ</Text>
         <View style={styles.placeholder} />
@@ -118,7 +119,7 @@ const FAQScreen = ({ navigation }) => {
       {/* Search Bar */}
       <View style={styles.searchSection}>
         <View style={styles.searchContainer}>
-          <Ionicons name="search" size={20} color="#666" />
+          <Ionicons name="search" size={20} color={tct('#666')} />
           <Text style={styles.searchPlaceholder}>Search FAQs...</Text>
         </View>
       </View>
@@ -150,10 +151,10 @@ const FAQScreen = ({ navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const styles = themedStyles(() => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFF',
+    backgroundColor: tc('#FFF'),
   },
   header: {
     flexDirection: 'row',
@@ -163,12 +164,12 @@ const styles = StyleSheet.create({
     paddingTop: 20,
     paddingBottom: 15,
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
+    borderBottomColor: tc('#F0F0F0'),
   },
   headerTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#000',
+    color: tct('#000'),
   },
   placeholder: {
     width: 24,
@@ -177,12 +178,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 15,
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
+    borderBottomColor: tc('#F0F0F0'),
   },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F8F9FA',
+    backgroundColor: tc('#F8F9FA'),
     paddingHorizontal: 15,
     paddingVertical: 12,
     borderRadius: 8,
@@ -190,7 +191,7 @@ const styles = StyleSheet.create({
   searchPlaceholder: {
     marginLeft: 10,
     fontSize: 16,
-    color: '#666',
+    color: tct('#666'),
     flex: 1,
   },
   faqList: {
@@ -200,22 +201,22 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 25,
     borderBottomWidth: 1,
-    borderBottomColor: '#F8F8F8',
+    borderBottomColor: tc('#F8F8F8'),
   },
   introTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#000',
+    color: tct('#000'),
     marginBottom: 10,
   },
   introText: {
     fontSize: 16,
-    color: '#666',
+    color: tct('#666'),
     lineHeight: 22,
   },
   faqItem: {
     borderBottomWidth: 1,
-    borderBottomColor: '#F8F8F8',
+    borderBottomColor: tc('#F8F8F8'),
   },
   questionContainer: {
     flexDirection: 'row',
@@ -227,7 +228,7 @@ const styles = StyleSheet.create({
   questionText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#000',
+    color: tct('#000'),
     flex: 1,
     marginRight: 15,
     lineHeight: 22,
@@ -235,32 +236,32 @@ const styles = StyleSheet.create({
   answerContainer: {
     paddingHorizontal: 20,
     paddingBottom: 20,
-    backgroundColor: '#FAFAFA',
+    backgroundColor: tc('#FAFAFA'),
   },
   answerText: {
     fontSize: 15,
-    color: '#333',
+    color: tct('#333'),
     lineHeight: 22,
     textAlign: 'left',
   },
   supportSection: {
     margin: 20,
     padding: 20,
-    backgroundColor: '#F8F9FA',
+    backgroundColor: tc('#F8F9FA'),
     borderRadius: 12,
     alignItems: 'center',
     borderLeftWidth: 4,
-    borderLeftColor: '#FF4500',
+    borderLeftColor: tc('#FF4500'),
   },
   supportTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#000',
+    color: tct('#000'),
     marginBottom: 10,
   },
   supportText: {
     fontSize: 15,
-    color: '#666',
+    color: tct('#666'),
     textAlign: 'center',
     lineHeight: 22,
     marginBottom: 20,
@@ -268,7 +269,7 @@ const styles = StyleSheet.create({
   contactButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FF4500',
+    backgroundColor: tc('#FF4500'),
     paddingHorizontal: 20,
     paddingVertical: 12,
     borderRadius: 8,
@@ -279,6 +280,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginLeft: 8,
   },
-});
+}));
 
 export default FAQScreen;
