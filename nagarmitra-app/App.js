@@ -31,6 +31,9 @@ import WorkQueueScreen from './src/screens/WorkQueueScreen';
 import AdminScreen from './src/screens/AdminScreen';
 import AdminUsersScreen from './src/screens/AdminUsersScreen';
 import { setupNotifications, showLocalAlert, onNotificationTap } from './src/services/notificationService';
+import { installGlobalErrorHandler } from './src/services/crashReporter';
+
+installGlobalErrorHandler();
 
 const Tab = createBottomTabNavigator();
 const RootStack = createNativeStackNavigator();

@@ -19,7 +19,11 @@ export default function BotpressWidget() {
               <Ionicons name="close" size={24} color="#FFF" />
             </TouchableOpacity>
           </View>
-          <WebView 
+          <WebView
+            // Android kills the whole app if a WebView renderer dies and this isn't handled
+            onRenderProcessGone={() => setIsOpen(false)}
+            onContentProcessDidTerminate={() => setIsOpen(false)}
+            setSupportMultipleWindows={false} 
             source={{ uri: BOT_URL }} 
             style={styles.webview} 
             startInLoadingState={true}

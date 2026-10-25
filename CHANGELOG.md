@@ -1,5 +1,18 @@
 # Changelog
 
+## v1.2.2 — 2026-10-26
+
+### Fixed
+- **Typed text invisible on phones that force dark mode** (MIUI/HyperOS, One UI, OxygenOS, ColorOS…): the app now opts out with `android:forceDarkAllowed=false` (config plugin `plugins/withNoForceDark.js`), so its light design is never recoloured.
+- **App closing when the Dashboard map's WebView renderer dies** (crash or low-memory kill): both WebViews now handle `onRenderProcessGone`, the map recovers with a "Try again" card, and it is created only after the screen finishes opening.
+- Community post box had no placeholder colour.
+
+### Added
+- Crash reporting: render errors, fatal JS errors and WebView crashes are sent to `POST /api/v1/client-errors` (kept 30 days, viewable by the super admin).
+
+### Removed
+- 12 unused packages (expo-av, expo-camera, expo-speech, expo-haptics, picker, react-native-elements/modal/progress/super-grid, axios, react-query, zustand) and the microphone/overlay/audio-settings permissions they added.
+
 ## v1.2.1 — 2026-10-25
 
 ### Added

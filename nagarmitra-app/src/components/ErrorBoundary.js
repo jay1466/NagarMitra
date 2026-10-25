@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { reportClientError } from '../services/crashReporter';
 
 // Catches render errors in a subtree so one broken screen shows a retry
 // card instead of closing the whole app.
@@ -16,6 +17,12 @@ export default class ErrorBoundary extends React.Component {
 
   componentDidCatch(error, info) {
     console.error('Screen crashed:', error, info?.componentStack);
+    reportClientError({
+      kind: 'render_error',
+      message: error?.message,
+      stack: `${error?.stack || ''}\n--- component stack ---${info?.componentStack || ''}`,
+      screen: this.props.name,
+    });
   }
 
   reset = () => this.setState({ hasError: false });
@@ -40,7 +47,7 @@ export default class ErrorBoundary extends React.Component {
 // Wrap a screen component so each screen fails independently.
 export function withErrorBoundary(Screen) {
   const Wrapped = (props) => (
-    <ErrorBoundary>
+    <ErrorBoundary name={Screen.displayName || Screen.name}>
       <Screen {...props} />
     </ErrorBoundary>
   );

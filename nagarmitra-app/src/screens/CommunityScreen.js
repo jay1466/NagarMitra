@@ -454,6 +454,7 @@ export default function CommunityScreen({ navigation }) {
           {/* Caption Input */}
           <TextInput
             style={styles.captionInput}
+            placeholderTextColor="#999"
             multiline
             placeholder="What's happening in your community?"
             value={newPost.caption}

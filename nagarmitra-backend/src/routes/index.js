@@ -10,6 +10,7 @@ import feedbackRouter from './feedback.js';
 import metaRouter from './meta.js';
 import adminRouter from './admin.js';
 import jobsRouter from './jobs.js';
+import clientErrorsRouter from './clientErrors.js';
 
 const router = Router();
 
@@ -24,5 +25,6 @@ router.use('/feedback', feedbackRouter);
 router.use('/meta', metaRouter);
 router.use('/admin', adminRouter);
 router.use('/jobs', jobsRouter);
+router.use('/client-errors', clientErrorsRouter);
 
 export default router;

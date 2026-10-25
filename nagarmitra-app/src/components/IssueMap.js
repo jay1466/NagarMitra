@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator, InteractionManager, TouchableOpacity } from 'react-native';
+import { reportClientError } from '../services/crashReporter';
 import { WebView } from 'react-native-webview';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -50,6 +51,14 @@ export default function IssueMap({ points, mode = 'markers', userLocation, heigh
   const webRef = useRef(null);
   const [ready, setReady] = useState(false);
   const [failed, setFailed] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  const [attempt, setAttempt] = useState(0);
+
+  // Create the WebView only after the screen has finished its first render/animation
+  useEffect(() => {
+    const task = InteractionManager.runAfterInteractions(() => setMounted(true));
+    return () => task.cancel();
+  }, []);
 
   const payload = useMemo(
     () => JSON.stringify({ points, mode, me: userLocation || null }),
@@ -60,11 +69,28 @@ export default function IssueMap({ points, mode = 'markers', userLocation, heigh
     if (ready) webRef.current?.injectJavaScript(`window.render(${payload}); true;`);
   }, [ready, payload]);
 
+  const retry = () => {
+    setFailed(false);
+    setReady(false);
+    setAttempt((a) => a + 1);
+  };
+
   if (failed) {
     return (
       <View style={[styles.fallback, { height }]}>
         <Ionicons name="map-outline" size={36} color="#BBB" />
         <Text style={styles.fallbackText}>Map couldn't load. Check your internet connection.</Text>
+        <TouchableOpacity onPress={retry} style={{ marginTop: 10 }}>
+          <Text style={{ color: '#FF4500', fontWeight: 'bold' }}>Try again</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  if (!mounted) {
+    return (
+      <View style={[styles.wrapper, styles.loading, { height, position: 'relative' }]}>
+        <ActivityIndicator color="#FF4500" />
       </View>
     );
   }
@@ -72,6 +98,7 @@ export default function IssueMap({ points, mode = 'markers', userLocation, heigh
   return (
     <View style={[styles.wrapper, { height }]}>
       <WebView
+        key={attempt}
         ref={webRef}
         source={{ html, baseUrl: 'https://localhost' }}
         originWhitelist={['*']}
@@ -87,6 +114,14 @@ export default function IssueMap({ points, mode = 'markers', userLocation, heigh
           }
         }}
         onError={() => setFailed(true)}
+        // Android kills the whole app if a WebView renderer dies and this isn't handled
+        onRenderProcessGone={(e) => {
+          reportClientError({ kind: 'webview_render_gone', message: `IssueMap renderer gone (crashed: ${e?.nativeEvent?.didCrash})` });
+          setFailed(true);
+        }}
+        onContentProcessDidTerminate={() => setFailed(true)}
+        setSupportMultipleWindows={false}
+        cacheEnabled
         onHttpError={() => {}}
         style={styles.web}
       />
